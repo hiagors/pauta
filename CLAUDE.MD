@@ -43,5 +43,9 @@ unicidade da alocação é `(initiative_id, sprint_id)`.
 Três pontos menores seguem abertos, com premissa em vigor documentada na seção 16
 do spec — siga a premissa, não pergunte de novo.
 
-Fases concluídas: nenhuma. Próxima: **Fase 0** (seção 13 do spec), ainda não
-iniciada.
+Fases concluídas: **0** (scaffold) e **1** (domínio puro). Próxima: **Fase 2**
+(use cases com repositórios fake, seção 13 do spec).
+
+A consulta filtrada dos repositórios se chama `list_all`, não `list`: um método
+`list` no corpo da classe sombreia o builtin e quebra as anotações `list[X]` dos
+métodos declarados depois dele.
