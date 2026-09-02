@@ -1,0 +1,46 @@
+[project]
+name = "pauta"
+version = "0.1.0"
+description = "Planejamento de sprints do time — API local"
+requires-python = ">=3.14"
+
+# Versões pinadas conforme §4.1 do spec. Nada entra aqui sem estar na seção.
+dependencies = [
+  "fastapi~=0.141.1",
+  "uvicorn[standard]~=0.52.4",
+  "sqlalchemy>=2.0.52,<2.1",
+  "alembic~=1.19.1",
+  "pydantic~=2.13.5",
+  "pydantic-settings~=2.15.0",
+  "typer~=0.27.2",
+]
+
+[dependency-groups]
+dev = [
+  "pytest~=9.1.1",
+  "pytest-asyncio~=1.4.0",
+  "httpx~=0.28.1",
+  "ruff~=0.16.5",
+  "mypy~=2.3.1",
+]
+
+[tool.uv]
+# O backend não é distribuído como pacote: o venv só carrega as dependências e o
+# `app/` é importado a partir da raiz de `backend/` (ver `pythonpath` abaixo).
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+asyncio_mode = "strict"
+
+[tool.ruff]
+target-version = "py314"
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.14"

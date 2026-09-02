@@ -1,0 +1,19 @@
+# runtime e dados
+data/
+*.sqlite
+*.sqlite-journal
+.venv/
+node_modules/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+.astro/
+
+# local do agente
+CLAUDE.local.md
+.claude/settings.local.json
+
+# pasta sincronizada (Drive) — saída, não fonte
+snapshots/

@@ -1,0 +1,6 @@
+# O pnpm 11 lê as configurações daqui, não mais do campo "pnpm" do package.json.
+# O esbuild precisa rodar o script de instalação para baixar o binário nativo que
+# o Vite (e portanto o Astro e o Vitest) usa; sem esta autorização o
+# `pnpm install` termina em erro (ERR_PNPM_IGNORED_BUILDS).
+allowBuilds:
+  esbuild: true

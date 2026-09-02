@@ -1,0 +1,9 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    // As ilhas React precisam do runtime automático de JSX; o preset do Astro
+    // usa "preserve", que só serve para os arquivos .astro.
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
+  }
+}

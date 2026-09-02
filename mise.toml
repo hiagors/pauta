@@ -1,0 +1,88 @@
+[tools]
+python = "3.14"
+node   = "24"
+uv     = "0.12.9"
+pnpm   = "11.25.0"
+
+[env]
+# O uv é o dono do venv (D9). O mise apenas ativa se já existir — quem cria é
+# `mise run setup`. Na primeira entrada no diretório o mise avisa que não existe;
+# é esperado.
+_.python.venv = { path = "{{config_root}}/backend/.venv", create = false }
+
+# Faz o uv usar o Python que o mise instalou, em vez de baixar outro.
+UV_PYTHON_PREFERENCE = "only-system"
+
+DATABASE_URL = "sqlite+pysqlite:///{{config_root}}/data/pauta.sqlite"
+SNAPSHOT_DIR = "{{config_root}}/snapshots"
+PUBLIC_API_URL = "http://127.0.0.1:8000"
+
+[tasks."setup:dirs"]
+run = "mkdir -p {{config_root}}/data {{config_root}}/snapshots"
+
+[tasks."setup:py"]
+dir = "{{config_root}}/backend"
+run = "uv sync"
+
+[tasks."setup:web"]
+dir = "{{config_root}}/frontend"
+run = "pnpm install"
+
+[tasks."setup:db"]
+description = "Aplica as migrations"
+dir = "{{config_root}}/backend"
+depends = ["setup:dirs", "setup:py"]
+run = "uv run alembic upgrade head"
+
+[tasks.setup]
+description = "Prepara a máquina do zero"
+depends = ["setup:db", "setup:web"]
+
+[tasks."dev:api"]
+description = "API em :8000"
+dir = "{{config_root}}/backend"
+run = "uv run uvicorn app.adapters.inbound.http.main:app --reload --port 8000"
+
+[tasks."dev:web"]
+description = "Front em :4321"
+dir = "{{config_root}}/frontend"
+run = "pnpm dev"
+
+[tasks.dev]
+description = "Sobe API e front juntos"
+depends = ["dev:api", "dev:web"]
+
+[tasks."test:py"]
+dir = "{{config_root}}/backend"
+run = "uv run pytest"
+
+[tasks."test:web"]
+dir = "{{config_root}}/frontend"
+run = "pnpm vitest run"
+
+[tasks.test]
+description = "pytest + vitest"
+depends = ["test:py", "test:web"]
+
+[tasks.lint]
+description = "ruff + mypy --strict no domínio e aplicação"
+dir = "{{config_root}}/backend"
+run = [
+  "uv run ruff check .",
+  "uv run ruff format --check .",
+  "uv run mypy --strict app/domain app/application",
+]
+
+[tasks.fmt]
+dir = "{{config_root}}/backend"
+run = "uv run ruff format ."
+
+[tasks.types]
+description = "Regenera frontend/src/lib/types.ts do OpenAPI"
+dir = "{{config_root}}/frontend"
+run = "pnpm openapi-typescript http://127.0.0.1:8000/api/v1/openapi.json -o src/lib/types.ts"
+
+[tasks.snapshot]
+description = "Exporta snapshot para a pasta sincronizada"
+dir = "{{config_root}}/backend"
+run = "uv run python -m app.adapters.inbound.cli snapshot export"
