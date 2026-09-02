@@ -85,11 +85,11 @@ def test_the_migration_is_the_only_way_the_schema_gets_created(
 
 
 def test_the_migration_refuses_to_run_without_database_url(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """`migrations/env.py` falha alto: a URL vem do ambiente, nunca do
     `alembic.ini`, e um default silencioso migraria o banco errado."""
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
     with pytest.raises(RuntimeError, match="DATABASE_URL"):
-        command.upgrade(alembic_config(tmp_path / "x.sqlite"), "head")
+        command.upgrade(alembic_config(), "head")

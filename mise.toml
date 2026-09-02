@@ -41,7 +41,9 @@ depends = ["setup:db", "setup:web"]
 [tasks."dev:api"]
 description = "API em :8000"
 dir = "{{config_root}}/backend"
-run = "uv run uvicorn app.adapters.inbound.http.main:app --reload --port 8000"
+# `--factory`: a aplicação vem de create_app(), e não de uma instância de
+# módulo. É o que mantém `import main` livre de efeito colateral (ver main.py).
+run = "uv run uvicorn --factory app.adapters.inbound.http.main:create_app --reload --port 8000"
 
 [tasks."dev:web"]
 description = "Front em :4321"

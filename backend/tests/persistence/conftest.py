@@ -52,7 +52,7 @@ def database_url(path: Path) -> str:
     return f"sqlite+pysqlite:///{path}"
 
 
-def alembic_config(path: Path) -> Config:
+def alembic_config() -> Config:
     """O `alembic.ini` do projeto, com `script_location` absoluto.
 
     O do arquivo é relativo e depende de o processo estar em `backend/` (é o
@@ -85,12 +85,12 @@ def _database_url(path: Path) -> Iterator[None]:
 
 def upgrade(path: Path, revision: str = "head") -> None:
     with _database_url(path):
-        command.upgrade(alembic_config(path), revision)
+        command.upgrade(alembic_config(), revision)
 
 
 def downgrade(path: Path, revision: str = "base") -> None:
     with _database_url(path):
-        command.downgrade(alembic_config(path), revision)
+        command.downgrade(alembic_config(), revision)
 
 
 @pytest.fixture(scope="session")

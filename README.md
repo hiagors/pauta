@@ -57,7 +57,13 @@ travam na prática as versões da seção 4.1 do spec.
 
 ## Estado
 
-Fase 0 (scaffold) concluída. As fases seguintes estão na seção 13 do spec. Por
-enquanto o front não tem nenhuma rota (`src/pages/` chega na Fase 6) e o backend
-não tem nenhuma migration aplicada além do controle do Alembic (Fase 3), então
-`mise run dev` ainda não tem tela para mostrar.
+Fases 0 a 4 concluídas (seção 13 do spec): scaffold, domínio, use cases,
+persistência em SQLite e a API HTTP.
+
+O backend já responde: com `mise run dev:api` no ar, a documentação navegável
+fica em <http://127.0.0.1:8000/docs> e o OpenAPI em
+`/api/v1/openapi.json`. Os dois endpoints de `/snapshots` chegam na Fase 5.
+
+O front ainda não tem nenhuma rota — `src/pages/` é a Fase 6 —, então
+`mise run dev:web` sobe um servidor sem tela para mostrar. Não existe `seed`:
+todo dado entra pela API, ou pela interface quando ela existir.

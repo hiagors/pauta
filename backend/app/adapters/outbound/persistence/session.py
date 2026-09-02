@@ -25,9 +25,17 @@ from sqlalchemy.orm import Session, sessionmaker
 CASEFOLD = "pauta_casefold"
 
 
-def make_engine(url: str, *, echo: bool = False) -> Engine:
-    """Engine para a `DATABASE_URL` do `mise.toml` (arquivo único em `data/`)."""
-    engine = create_engine(url, echo=echo)
+def make_engine(url: str, *, echo: bool = False, **options: Any) -> Engine:
+    """Engine para a `DATABASE_URL` do `mise.toml` (arquivo único em `data/`).
+
+    `options` vai direto para o `create_engine`. Existe por um caso concreto: a
+    suíte de HTTP roda em `:memory:`, que exige `StaticPool` e
+    `check_same_thread=False` — um banco em memória vive dentro da conexão, e
+    um pool que abre a segunda conexão abre um banco vazio. Esse caso tem de
+    passar por aqui, e não montar a engine à mão, para ganhar o `PRAGMA` e o
+    `pauta_casefold` como qualquer outra.
+    """
+    engine = create_engine(url, echo=echo, **options)
     event.listen(engine, "connect", _prepare_connection)
     return engine
 
