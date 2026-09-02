@@ -170,7 +170,7 @@ def test_the_current_sprint_survives_a_calendar_gap() -> None:
 
 def test_no_sprint_is_current_before_the_first_one_starts() -> None:
     fakes = Fakes(clock=FrozenClock(date(2026, 8, 1)))
-    World(fakes=fakes).sprints(18, 19)
+    World(repos=fakes).sprints(18, 19)
 
     views = fakes.use_case(ListSprints).execute()
 

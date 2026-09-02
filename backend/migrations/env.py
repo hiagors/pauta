@@ -1,8 +1,8 @@
 """Ambiente de execução das migrations.
 
 A URL do banco vem de `DATABASE_URL` (definida no `mise.toml`), nunca do
-`alembic.ini`. `target_metadata` continua `None` até a Fase 3, quando o
-`models.py` do adapter de persistência passa a ser a fonte do autogenerate.
+`alembic.ini`. O `target_metadata` é o do `models.py` do adapter de
+persistência — é dele que o `--autogenerate` compara o schema.
 """
 
 from __future__ import annotations
@@ -12,6 +12,8 @@ from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+from app.adapters.outbound.persistence.models import Base
 
 config = context.config
 
@@ -26,8 +28,7 @@ if not database_url:
     )
 config.set_main_option("sqlalchemy.url", database_url)
 
-# Fase 3 troca por `models.Base.metadata`.
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:

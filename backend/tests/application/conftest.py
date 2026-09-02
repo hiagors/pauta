@@ -4,15 +4,20 @@ Sem banco e sem mock: os fakes de `fakes.py` implementam as portas, e o
 `FrozenClock` da suíte de domínio implementa a porta `Clock`. Nenhum use case
 recebe outra coisa.
 
-`World` monta o cenário escrevendo direto nos fakes. Isso é de propósito: o
-cenário é o **arranjo**, e arranjar via use case faria cada teste depender de
-todos os outros para nada. Onde o use case de escrita é o que está sob teste,
-o teste o chama.
+`World` monta o cenário escrevendo direto nos repositórios. Isso é de
+propósito: o cenário é o **arranjo**, e arranjar via use case faria cada teste
+depender de todos os outros para nada. Onde o use case de escrita é o que está
+sob teste, o teste o chama.
+
+`World` fala com o `Repositories` — o feixe de portas —, não com os fakes: é o
+que permite `tests/persistence/` montar o mesmo cenário contra os repositórios
+SQLAlchemy e rodar a mesma suíte de contrato (critério da Fase 3).
 """
 
 import dataclasses
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+from typing import Protocol
 from uuid import UUID
 
 import pytest
@@ -24,6 +29,17 @@ from app.domain.entities.project import Project
 from app.domain.entities.sprint import Sprint
 from app.domain.entities.squad import Squad
 from app.domain.entities.squad_membership import SquadMembership
+from app.domain.ports.clock import Clock
+from app.domain.ports.repositories import (
+    AllocationRepository,
+    InitiativeRepository,
+    MemberRepository,
+    MutedAlertRepository,
+    ProjectRepository,
+    SprintRepository,
+    SquadMembershipRepository,
+    SquadRepository,
+)
 from app.domain.value_objects.assignee import Assignee
 from app.domain.value_objects.color import Color
 from app.domain.value_objects.initiative_status import InitiativeStatus
@@ -45,6 +61,26 @@ TODAY = date(2026, 9, 2)
 
 #: A Sprint 18 começa na segunda 31/08/2026 (§6.6).
 FIRST_SPRINT_START = date(2026, 8, 31)
+
+
+class Repositories(Protocol):
+    """O feixe de portas, sem dizer quem as implementa.
+
+    Existe para que `World` sirva tanto aos fakes desta suíte quanto aos
+    repositórios SQLAlchemy de `tests/persistence/`. Os nomes dos campos são os
+    mesmos dos campos dos use cases — é o que permite `Fakes.use_case()`
+    injetar por nome.
+    """
+
+    clock: Clock
+    projects: ProjectRepository
+    initiatives: InitiativeRepository
+    members: MemberRepository
+    squads: SquadRepository
+    memberships: SquadMembershipRepository
+    sprints: SprintRepository
+    allocations: AllocationRepository
+    muted_alerts: MutedAlertRepository
 
 
 @dataclass
@@ -89,7 +125,7 @@ class Fakes:
 class World:
     """Construtores de cenário. Ids determinísticos, para o output ser legível."""
 
-    fakes: Fakes
+    repos: Repositories
     _seed: int = 0
 
     def _id(self) -> UUID:
@@ -109,13 +145,13 @@ class World:
                 end_date=start + timedelta(days=11),
                 id=uid(1000 + number),
             )
-            self.fakes.sprints.add(sprint)
+            self.repos.sprints.add(sprint)
             created.append(sprint)
             start += timedelta(days=14)
         return created
 
     def sprint(self, number: int) -> Sprint:
-        found = self.fakes.sprints.get_by_number(number)
+        found = self.repos.sprints.get_by_number(number)
         assert found is not None, f"Sprint {number} não foi criada no cenário"
         return found
 
@@ -130,7 +166,7 @@ class World:
             color=Color.parse(color),
             id=self._id(),
         )
-        self.fakes.projects.add(project)
+        self.repos.projects.add(project)
         return project
 
     def initiative(
@@ -147,13 +183,13 @@ class World:
             id=self._id(),
             project_id=project.id,
             name=name,
-            entered_at=self.fakes.clock.today(),
+            entered_at=self.repos.clock.today(),
             layer=layer,
             priority=priority,
             estimated_sprints=estimated_sprints,
             status=status,
         )
-        self.fakes.initiatives.add(initiative)
+        self.repos.initiatives.add(initiative)
         return initiative
 
     def member(self, name: str, *, active: bool = True) -> Member:
@@ -164,21 +200,21 @@ class World:
         )
         if not active:
             member.deactivate()
-        self.fakes.members.add(member)
+        self.repos.members.add(member)
         return member
 
     def squad(self, name: str, *, active: bool = True) -> Squad:
         squad = Squad.create(name=name, id=self._id())
         if not active:
             squad.deactivate()
-        self.fakes.squads.add(squad)
+        self.repos.squads.add(squad)
         return squad
 
     # -- plano ---------------------------------------------------------- #
 
     def join(self, squad: Squad, member: Member, *sprint_numbers: int) -> None:
         """Coloca o membro na squad nas sprints informadas (§6.5)."""
-        self.fakes.memberships.add_many(
+        self.repos.memberships.add_many(
             [
                 SquadMembership.create(
                     squad_id=squad.id,
@@ -210,7 +246,7 @@ class World:
             )
             for number in sprint_numbers
         ]
-        self.fakes.allocations.add_many(created)
+        self.repos.allocations.add_many(created)
         return created
 
 
@@ -226,4 +262,4 @@ def fakes(clock: FrozenClock) -> Fakes:
 
 @pytest.fixture
 def world(fakes: Fakes) -> World:
-    return World(fakes=fakes)
+    return World(repos=fakes)
