@@ -43,9 +43,18 @@ unicidade da alocação é `(initiative_id, sprint_id)`.
 Três pontos menores seguem abertos, com premissa em vigor documentada na seção 16
 do spec — siga a premissa, não pergunte de novo.
 
-Fases concluídas: **0** (scaffold) e **1** (domínio puro). Próxima: **Fase 2**
-(use cases com repositórios fake, seção 13 do spec).
+Fases concluídas: **0** (scaffold), **1** (domínio puro) e **2** (use cases com
+repositórios fake). Próxima: **Fase 3** (persistência, seção 13 do spec).
 
 A consulta filtrada dos repositórios se chama `list_all`, não `list`: um método
 `list` no corpo da classe sombreia o builtin e quebra as anotações `list[X]` dos
 métodos declarados depois dele.
+
+`PATCH` usa o sentinela `UNSET` de `application/dto/common.py`. Campo ausente e
+campo nulo são coisas diferentes: `color: null` limpa a cor do projeto, e a
+ausência de `color` não mexe no que está gravado.
+
+O `pytest` roda com `--import-mode=importlib` e `consider_namespace_packages`.
+No modo `prepend` dois arquivos de teste com o mesmo nome de base em pastas
+diferentes (`tests/domain/test_allocation.py` e
+`tests/application/test_allocation.py`) colidem na importação.
