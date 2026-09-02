@@ -28,6 +28,7 @@ from app.domain.entities.project import Project
 from app.domain.entities.sprint import Sprint
 from app.domain.entities.squad import Squad
 from app.domain.entities.squad_membership import SquadMembership
+from app.domain.ports.snapshot import SnapshotBundle
 from app.domain.value_objects.initiative_status import InitiativeStatus
 from app.domain.value_objects.priority import Priority
 
@@ -337,3 +338,57 @@ class FakeMutedAlertRepository:
 
     def delete(self, mute_id: UUID) -> None:
         self.rows.pop(mute_id, None)
+
+
+@dataclass
+class FakeSnapshotStore:
+    """`SnapshotStore` sobre os outros fakes (§9).
+
+    Não guarda dado próprio: `dump` lê as mesmas linhas que os repositórios
+    veem e `replace` troca essas linhas. Um store com armazenamento paralelo
+    passaria a suíte de contrato e mentiria no teste de use case, onde o export
+    tem de ver o que o cenário escreveu pelos repositórios.
+    """
+
+    projects: FakeProjectRepository
+    initiatives: FakeInitiativeRepository
+    members: FakeMemberRepository
+    squads: FakeSquadRepository
+    memberships: FakeSquadMembershipRepository
+    sprints: FakeSprintRepository
+    allocations: FakeAllocationRepository
+    muted_alerts: FakeMutedAlertRepository
+
+    def dump(self) -> SnapshotBundle:
+        return SnapshotBundle(
+            projects=_by_id(self.projects.rows),
+            initiatives=_by_id(self.initiatives.rows),
+            members=_by_id(self.members.rows),
+            squads=_by_id(self.squads.rows),
+            squad_memberships=_by_id(self.memberships.rows),
+            sprints=_by_id(self.sprints.rows),
+            allocations=_by_id(self.allocations.rows),
+            muted_alerts=_by_id(self.muted_alerts.rows),
+        )
+
+    def replace(self, bundle: SnapshotBundle) -> None:
+        for rows, entities in (
+            (self.projects.rows, bundle.projects),
+            (self.initiatives.rows, bundle.initiatives),
+            (self.members.rows, bundle.members),
+            (self.squads.rows, bundle.squads),
+            (self.memberships.rows, bundle.squad_memberships),
+            (self.sprints.rows, bundle.sprints),
+            (self.allocations.rows, bundle.allocations),
+            (self.muted_alerts.rows, bundle.muted_alerts),
+        ):
+            rows.clear()
+            for entity in entities:
+                rows[entity.id] = deepcopy(entity)
+
+
+def _by_id[E](rows: dict[UUID, E]) -> tuple[E, ...]:
+    """Ordenado por `id`, como o `dump` do adapter (§9)."""
+    return tuple(
+        deepcopy(row) for row in sorted(rows.values(), key=lambda row: str(row.id))
+    )

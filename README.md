@@ -42,6 +42,37 @@ reinicie com `mise run dev:api` ou `mise run dev:web`.
 | `mise run types` | Regenera `frontend/src/lib/types.ts` a partir do OpenAPI (exige a API no ar) |
 | `mise run snapshot` | Exporta o snapshot para a pasta sincronizada |
 
+## Snapshot
+
+O banco é a fonte da verdade; `snapshots/` é saída, e é a pasta que fica no
+Drive. A cada alteração bem-sucedida pela API o snapshot é reexportado
+sozinho, cinco segundos depois da última alteração da sequência — editar dez
+coisas seguidas gera **um** export, não dez.
+
+Para exportar à mão:
+
+```sh
+mise run snapshot                       # para a pasta do SNAPSHOT_DIR
+cd backend && uv run python -m app.adapters.inbound.cli snapshot export --path /tmp/copia
+```
+
+A pasta tem os oito JSON das entidades, um `meta.json` com a hora da geração e
+os arquivos de leitura: `plan-sprint-18.md` (quem está em quê naquela sprint) e
+`plan-grid.md` (a grade inteira em tabela).
+
+Para restaurar em outra máquina, ou depois de perder o banco:
+
+```sh
+cd backend
+uv run alembic upgrade head                                    # banco vazio
+uv run python -m app.adapters.inbound.cli snapshot import ../snapshots
+```
+
+**A importação apaga tudo e recria** a partir da pasta — é restauração, não
+sincronização. Ela pergunta antes; `--yes` pula a pergunta. Os mesmos dois
+caminhos existem na API, em `POST /api/v1/snapshots/export` e
+`POST /api/v1/snapshots/import?confirm=true`.
+
 ## Estrutura
 
 ```
@@ -57,12 +88,12 @@ travam na prática as versões da seção 4.1 do spec.
 
 ## Estado
 
-Fases 0 a 4 concluídas (seção 13 do spec): scaffold, domínio, use cases,
-persistência em SQLite e a API HTTP.
+Fases 0 a 5 concluídas (seção 13 do spec): scaffold, domínio, use cases,
+persistência em SQLite, API HTTP e o snapshot com a CLI.
 
 O backend já responde: com `mise run dev:api` no ar, a documentação navegável
-fica em <http://127.0.0.1:8000/docs> e o OpenAPI em
-`/api/v1/openapi.json`. Os dois endpoints de `/snapshots` chegam na Fase 5.
+fica em <http://127.0.0.1:8000/docs> e o OpenAPI em `/api/v1/openapi.json`.
+Todos os endpoints da seção 8 do spec existem.
 
 O front ainda não tem nenhuma rota — `src/pages/` é a Fase 6 —, então
 `mise run dev:web` sobe um servidor sem tela para mostrar. Não existe `seed`:

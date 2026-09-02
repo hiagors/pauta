@@ -12,14 +12,37 @@ Duas responsabilidades:
    `Fakes` da suíte de use case, e de propósito: a Fase 4 é a primeira vez que
    esse feixe é montado com dependência de verdade, e ter uma fábrica por use
    case seria trinta e cinco funções que dizem a mesma coisa.
+
+A Fase 5 acrescentou a terceira: **agendar o export da RNF3**. A cada mutação
+bem-sucedida, `schedule_snapshot_export` põe em `BackgroundTasks` um toque no
+debounce de 5 segundos.
+
+Duas propriedades do `BackgroundTasks` fazem a regra valer, e as duas custam
+caro descobrir depois:
+
+- **a tarefa só roda no caminho de sucesso.** Ela é registrada na resolução da
+  dependência, mas quem a executa é a resposta do endpoint. Uma exceção — a
+  `DomainError` que vira 4xx, um corpo inválido, um 500 — é respondida pelo
+  handler de `errors.py`, e a resposta dele não carrega tarefa nenhuma. É
+  assim que "mutação **bem-sucedida**" sai de graça, sem inspecionar status.
+- **a tarefa roda antes do `commit` da requisição.** O teardown das
+  dependências com `yield` acontece depois das tarefas de fundo, e é
+  `provide_session` quem faz o `commit` no teardown. Por isso a tarefa não
+  exporta nada: ela só **arma** o debounce, que dispara 5 segundos depois, numa
+  sessão própria, quando a transação já fechou. Exportar aqui, na hora,
+  gravaria o snapshot de antes da mutação que o disparou.
+
+Quem fica de fora é o router de `/snapshots` (ver `main.py`): a importação
+`replace` não dispara export automático (RNF3).
 """
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, fields
 from functools import lru_cache
-from typing import Annotated, Self
+from pathlib import Path
+from typing import Annotated, Final, Self
 
-from fastapi import Depends
+from fastapi import BackgroundTasks, Depends, Request
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.adapters.outbound.persistence.repositories import (
@@ -28,14 +51,22 @@ from app.adapters.outbound.persistence.repositories import (
     SqlAlchemyMemberRepository,
     SqlAlchemyMutedAlertRepository,
     SqlAlchemyProjectRepository,
+    SqlAlchemySnapshotStore,
     SqlAlchemySprintRepository,
     SqlAlchemySquadMembershipRepository,
     SqlAlchemySquadRepository,
 )
 from app.adapters.outbound.persistence.session import make_engine, make_session_factory
+from app.adapters.outbound.snapshot.debounce import SnapshotDebouncer
+from app.adapters.outbound.snapshot.reader import DirectorySnapshotReader
+from app.adapters.outbound.snapshot.writer import DirectorySnapshotWriter
 from app.adapters.outbound.system_clock import SystemClock
-from app.config.settings import get_settings
+from app.application.use_cases.snapshots.export import ExportSnapshot
+from app.config.settings import Settings, get_settings
 from app.domain.ports.clock import Clock
+
+#: Os métodos que mudam dado. O `GET` não agenda export (RNF3).
+MUTATING_METHODS: Final = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
 @lru_cache
@@ -50,6 +81,22 @@ def get_session_factory() -> sessionmaker[Session]:
     settings = get_settings()
     engine = make_engine(settings.database_url, echo=settings.sql_echo)
     return make_session_factory(engine)
+
+
+def provide_settings(request: Request) -> Settings:
+    """As configurações **desta** aplicação, e não as do processo.
+
+    `create_app(settings)` as guarda em `app.state`, e é de lá que elas vêm.
+    Chamar `get_settings()` aqui faria a suíte de HTTP — que constrói um
+    `Settings` explícito, com a pasta de snapshot do teste — ler o ambiente da
+    máquina e escrever na pasta sincronizada de verdade.
+    """
+    config: Settings = request.app.state.settings
+    return config
+
+
+#: O que os endpoints e as outras dependências declaram.
+SettingsDep = Annotated[Settings, Depends(provide_settings)]
 
 
 def provide_clock() -> Clock:
@@ -87,6 +134,9 @@ class Ports:
     """
 
     clock: Clock
+    store: SqlAlchemySnapshotStore
+    writer: DirectorySnapshotWriter
+    reader: DirectorySnapshotReader
     projects: SqlAlchemyProjectRepository
     initiatives: SqlAlchemyInitiativeRepository
     members: SqlAlchemyMemberRepository
@@ -97,9 +147,12 @@ class Ports:
     muted_alerts: SqlAlchemyMutedAlertRepository
 
     @classmethod
-    def build(cls, *, session: Session, clock: Clock) -> Self:
+    def build(cls, *, session: Session, clock: Clock, snapshot_dir: Path) -> Self:
         return cls(
             clock=clock,
+            store=SqlAlchemySnapshotStore(session),
+            writer=DirectorySnapshotWriter(directory=snapshot_dir, clock=clock),
+            reader=DirectorySnapshotReader(),
             projects=SqlAlchemyProjectRepository(session),
             initiatives=SqlAlchemyInitiativeRepository(session),
             members=SqlAlchemyMemberRepository(session),
@@ -125,9 +178,78 @@ class Ports:
 def provide_ports(
     session: Annotated[Session, Depends(provide_session)],
     clock: Annotated[Clock, Depends(provide_clock)],
+    settings: SettingsDep,
 ) -> Ports:
-    return Ports.build(session=session, clock=clock)
+    return Ports.build(session=session, clock=clock, snapshot_dir=settings.snapshot_dir)
 
 
 #: O que os routers declaram. Um parâmetro, e o wiring inteiro vem com ele.
 PortsDep = Annotated[Ports, Depends(provide_ports)]
+
+
+# --------------------------------------------------------------------------- #
+# O export automático da RNF3
+# --------------------------------------------------------------------------- #
+
+
+def snapshot_exporter(
+    *, factory: sessionmaker[Session], directory: Path, clock: Clock
+) -> Callable[[], None]:
+    """A função que o debounce chama, com sessão própria.
+
+    Sessão própria porque ela roda numa thread, depois de a requisição ter
+    fechado a dela. É leitura: não há `commit` a fazer.
+    """
+
+    def run() -> None:
+        with factory() as session:
+            ExportSnapshot(
+                store=SqlAlchemySnapshotStore(session),
+                writer=DirectorySnapshotWriter(directory=directory, clock=clock),
+            ).execute()
+
+    return run
+
+
+def provide_snapshot_debouncer(
+    request: Request,
+    factory: Annotated[sessionmaker[Session], Depends(get_session_factory)],
+    clock: Annotated[Clock, Depends(provide_clock)],
+    settings: SettingsDep,
+) -> SnapshotDebouncer:
+    """Um debounce por aplicação, guardado em `app.state`.
+
+    Precisa sobreviver à requisição — é disso que coalescer se trata —, e por
+    isso não pode ser criado a cada chamada. Vive na aplicação, e não num
+    global do módulo, para que duas aplicações no mesmo processo (a suíte cria
+    uma por teste) não compartilhem o agendamento uma da outra.
+
+    Nasce na primeira requisição, não no `create_app`: é o que mantém a
+    promessa de que criar a aplicação não abre banco (ver `main.py`).
+    """
+    existing: SnapshotDebouncer | None = getattr(
+        request.app.state, "snapshot_debouncer", None
+    )
+    if existing is not None:
+        return existing
+    debouncer = SnapshotDebouncer(
+        snapshot_exporter(factory=factory, directory=settings.snapshot_dir, clock=clock)
+    )
+    request.app.state.snapshot_debouncer = debouncer
+    return debouncer
+
+
+def schedule_snapshot_export(
+    request: Request,
+    tasks: BackgroundTasks,
+    debouncer: Annotated[SnapshotDebouncer, Depends(provide_snapshot_debouncer)],
+) -> None:
+    """RNF3: a cada mutação bem-sucedida, um toque no debounce.
+
+    `schedule()` não exporta nada — ele remarca o timer, e o export sai 5
+    segundos depois da última mutação da sequência. Os dois motivos de a
+    tarefa poder ser registrada aqui, antes de se saber o resultado da
+    requisição, estão no topo do módulo.
+    """
+    if request.method in MUTATING_METHODS:
+        tasks.add_task(debouncer.schedule)

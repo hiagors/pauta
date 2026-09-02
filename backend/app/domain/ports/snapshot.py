@@ -6,6 +6,17 @@ nem de CSV (RNF5).
 
 O writer devolve os caminhos que gerou. Que formato ele escreve, em que ordem de
 chaves e com qual debounce é detalhe de adapter: o domínio não sabe.
+
+`SnapshotStore` é a terceira porta, e existe porque export e import são
+operações sobre o banco **inteiro**, não sobre um agregado:
+
+- o export precisa ler tudo, e ler oito repositórios para montar um objeto que
+  já tem nome (`SnapshotBundle`) seria o mesmo trabalho espalhado;
+- o import é `replace` (RNF4): apaga e recria dentro de uma transação. As
+  portas de `repositories.py` não têm — e não podem ter — o `delete` que isso
+  exigiria: membro e squad saem por `is_active = false` (§6.4, §6.5) e sprint
+  nunca é excluída (D13). Abrir um `delete` em cada uma delas para servir a
+  restauração desfaria justamente a regra que a ausência do método protege.
 """
 
 from dataclasses import dataclass
@@ -52,4 +63,22 @@ class SnapshotWriter(Protocol):
 class SnapshotReader(Protocol):
     def read(self, path: Path) -> SnapshotBundle:
         """Lê um snapshot de um diretório."""
+        ...
+
+
+@runtime_checkable
+class SnapshotStore(Protocol):
+    """O banco inteiro, de uma vez: é o que export e import precisam."""
+
+    def dump(self) -> SnapshotBundle:
+        """Tudo o que está gravado, com as listas ordenadas por `id`."""
+        ...
+
+    def replace(self, bundle: SnapshotBundle) -> None:
+        """Apaga o que existe e grava o `bundle` no lugar (RNF4).
+
+        Não faz `commit`: quem abre e fecha a transação é o adapter de entrada
+        (a requisição HTTP ou o comando da CLI). É isso que faz "apaga e
+        recria" ser tudo ou nada.
+        """
         ...

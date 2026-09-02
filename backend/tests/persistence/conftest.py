@@ -35,6 +35,7 @@ from app.adapters.outbound.persistence.repositories import (
     SqlAlchemyMemberRepository,
     SqlAlchemyMutedAlertRepository,
     SqlAlchemyProjectRepository,
+    SqlAlchemySnapshotStore,
     SqlAlchemySprintRepository,
     SqlAlchemySquadMembershipRepository,
     SqlAlchemySquadRepository,
@@ -150,6 +151,7 @@ class SqlRepositories:
     sprints: SqlAlchemySprintRepository
     allocations: SqlAlchemyAllocationRepository
     muted_alerts: SqlAlchemyMutedAlertRepository
+    store: SqlAlchemySnapshotStore
 
     @classmethod
     def build(cls, *, session: Session, clock: FrozenClock) -> Self:
@@ -163,6 +165,7 @@ class SqlRepositories:
             sprints=SqlAlchemySprintRepository(session),
             allocations=SqlAlchemyAllocationRepository(session),
             muted_alerts=SqlAlchemyMutedAlertRepository(session),
+            store=SqlAlchemySnapshotStore(session),
         )
 
 

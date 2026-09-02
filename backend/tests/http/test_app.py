@@ -6,6 +6,7 @@ e, na direção contrária, para que um endpoint inventado que não está no spe
 apareça como falha (`test_the_api_has_no_endpoint_beyond_the_spec`).
 """
 
+from pathlib import Path
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -14,7 +15,7 @@ from app.adapters.inbound.http.main import API_PREFIX, OPENAPI_URL, create_app
 from app.config.settings import DEFAULT_CORS_ORIGINS, Settings
 from tests.http.conftest import Api
 
-#: A tabela do §8, método a método. Sem os dois de snapshot, que são da Fase 5.
+#: A tabela do §8, método a método — os dois de snapshot inclusive (Fase 5).
 ENDPOINTS: tuple[tuple[str, str], ...] = (
     ("get", "/projects"),
     ("post", "/projects"),
@@ -52,6 +53,8 @@ ENDPOINTS: tuple[tuple[str, str], ...] = (
     ("get", "/alerts"),
     ("post", "/alerts/mute"),
     ("delete", "/alerts/mute/{mute_id}"),
+    ("post", "/snapshots/export"),
+    ("post", "/snapshots/import"),
 )
 
 
@@ -92,7 +95,7 @@ def test_every_endpoint_of_the_spec_exists(api: Api) -> None:
 
 
 def test_the_api_has_no_endpoint_beyond_the_spec(api: Api) -> None:
-    """§14: não inventar endpoint. O `POST /snapshots/*` do §8 é da Fase 5."""
+    """§14: não inventar endpoint."""
     published = _operations(api.client.get(OPENAPI_URL).json())
 
     extra = [
@@ -178,9 +181,13 @@ def test_cors_allows_the_astro_dev_server(api: Api) -> None:
         assert "access-control-allow-credentials" not in response.headers
 
 
-def test_cors_refuses_an_origin_that_is_not_configured() -> None:
+def test_cors_refuses_an_origin_that_is_not_configured(tmp_path: Path) -> None:
     app = create_app(
-        Settings(database_url="sqlite://", cors_origins=("http://localhost:4321",))
+        Settings(
+            database_url="sqlite://",
+            snapshot_dir=tmp_path,
+            cors_origins=("http://localhost:4321",),
+        )
     )
 
     with TestClient(app) as client:
@@ -195,10 +202,15 @@ def test_cors_refuses_an_origin_that_is_not_configured() -> None:
     assert "access-control-allow-origin" not in response.headers
 
 
-def test_creating_the_application_touches_no_database() -> None:
+def test_creating_the_application_touches_no_database(tmp_path: Path) -> None:
     """A engine nasce na primeira requisição, não no import (ver `main.py`).
 
     Uma URL que não abriria banco nenhum é aceita sem reclamar justamente
     porque `create_app` não abre banco.
     """
-    assert create_app(Settings(database_url="sqlite+pysqlite:///nao/existe.sqlite"))
+    assert create_app(
+        Settings(
+            database_url="sqlite+pysqlite:///nao/existe.sqlite",
+            snapshot_dir=tmp_path / "snapshots",
+        )
+    )

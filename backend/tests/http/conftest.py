@@ -12,10 +12,22 @@ Três decisões, cada uma com um motivo que custa caro descobrir depois:
 - **A dependência trocada é a fábrica de sessões**, não a `Session`. É o que
   mantém em pé o caminho de verdade do `deps.py`: uma transação por requisição,
   com `commit` no fim e `rollback` na exceção.
+
+A Fase 5 acrescentou uma quarta: **o timer do debounce é do teste**. O que a
+suíte precisa verificar é a regra da RNF3 — mutação bem-sucedida agenda,
+importação não —, e esperar cinco segundos por teste não verificaria nada
+melhor. `api.snapshot_scheduled` diz se a mutação agendou; `api.flush_snapshot()`
+faz o que a thread do timer faria ao vencer o intervalo. O `run` do debounce é o
+de produção, montado por `snapshot_exporter`: só o timer é de teste.
+
+Disparar o timer **depois** da resposta não é detalhe de conveniência: a tarefa
+de fundo roda antes de a requisição dar `commit` (ver `deps.py`), e é o atraso
+do debounce que faz o export ver o dado gravado.
 """
 
 from collections.abc import Iterator
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -25,12 +37,19 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlalchemy.pool import StaticPool
 
-from app.adapters.inbound.http.deps import get_session_factory, provide_clock
+from app.adapters.inbound.http.deps import (
+    get_session_factory,
+    provide_clock,
+    provide_snapshot_debouncer,
+    snapshot_exporter,
+)
 from app.adapters.inbound.http.main import API_PREFIX, create_app
 from app.adapters.outbound.persistence.session import make_engine, make_session_factory
+from app.adapters.outbound.snapshot.debounce import SnapshotDebouncer
 from app.config.settings import Settings
 from tests.domain.conftest import FrozenClock
 from tests.persistence.conftest import alembic_config
+from tests.snapshot.timers import TimerSpy
 
 #: Um banco por engine, e a engine morre no fim do teste.
 IN_MEMORY_URL = "sqlite+pysqlite:///:memory:"
@@ -70,8 +89,22 @@ class Api:
     que ele mudar ser um `sed` em cem linhas.
     """
 
-    def __init__(self, client: TestClient) -> None:
+    def __init__(
+        self, client: TestClient, snapshot_dir: Path, snapshot_timers: TimerSpy
+    ) -> None:
         self.client = client
+        #: A pasta que o export automático da RNF3 escreve.
+        self.snapshot_dir = snapshot_dir
+        self._snapshot_timers = snapshot_timers
+
+    @property
+    def snapshot_scheduled(self) -> bool:
+        """Se alguma requisição agendou o export automático (RNF3)."""
+        return bool(self._snapshot_timers.created)
+
+    def flush_snapshot(self) -> None:
+        """Dispara o export agendado, como a thread do timer faria."""
+        self._snapshot_timers.pending.fire()
 
     def get(self, path: str, **kwargs: Any) -> Any:
         return self.client.get(f"{API_PREFIX}{path}", **kwargs)
@@ -180,16 +213,30 @@ class Api:
 
 
 @pytest.fixture
-def settings() -> Settings:
-    """A URL não é lida do ambiente: a engine da suíte é a de memória."""
-    return Settings(database_url=IN_MEMORY_URL)
+def snapshot_dir(tmp_path: Path) -> Path:
+    """A pasta sincronizada do teste. Nunca a de verdade."""
+    return tmp_path / "snapshots"
 
 
 @pytest.fixture
-def api(engine: Engine, clock: FrozenClock, settings: Settings) -> Iterator[Api]:
+def settings(snapshot_dir: Path) -> Settings:
+    """Nem a URL nem a pasta vêm do ambiente: as duas são do teste."""
+    return Settings(database_url=IN_MEMORY_URL, snapshot_dir=snapshot_dir)
+
+
+@pytest.fixture
+def api(
+    engine: Engine, clock: FrozenClock, settings: Settings, snapshot_dir: Path
+) -> Iterator[Api]:
     app = create_app(settings)
     factory = make_session_factory(engine)
     app.dependency_overrides[get_session_factory] = lambda: factory
     app.dependency_overrides[provide_clock] = lambda: clock
+    timers = TimerSpy()
+    debouncer = SnapshotDebouncer(
+        snapshot_exporter(factory=factory, directory=snapshot_dir, clock=clock),
+        timer_factory=timers,
+    )
+    app.dependency_overrides[provide_snapshot_debouncer] = lambda: debouncer
     with TestClient(app) as client:
-        yield Api(client)
+        yield Api(client, snapshot_dir, timers)

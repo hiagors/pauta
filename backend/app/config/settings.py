@@ -3,13 +3,17 @@
 Tudo o que muda entre máquinas entra por variável de ambiente, definida no
 `mise.toml`. O `DATABASE_URL` não tem default de propósito: um default
 silencioso migraria ou leria o banco errado, e é a mesma decisão que o
-`migrations/env.py` já tomou.
+`migrations/env.py` já tomou. O `SNAPSHOT_DIR` também não tem, e pelo mesmo
+motivo: ele aponta para a pasta sincronizada (§9), e escrever o plano do time
+em uma pasta qualquer relativa ao diretório de trabalho é pior do que recusar
+subir.
 
 As origens do CORS moram aqui, e não no router, porque são configuração e não
 regra: em produção local são as duas portas do dev server do Astro (§10.4).
 """
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -27,6 +31,10 @@ class Settings(BaseSettings):
 
     #: Arquivo único do SQLite (RNF1). Exportado pelo `mise.toml`.
     database_url: str
+
+    #: Pasta sincronizada onde o snapshot é escrito (§9, RNF3). O writer a cria
+    #: se não existir — o `mise run setup` já a cria junto com `data/`.
+    snapshot_dir: Path
 
     #: `allow_credentials = False` e todos os métodos e headers (§10.4). Não há
     #: autenticação (RNF6), então não há cookie a proteger.

@@ -4,6 +4,10 @@ Três coisas e nada mais: CORS, handlers de erro e os routers do §8. Nenhuma
 regra de negócio mora aqui, e nenhum router monta erro à mão — quem traduz
 exceção para JSON é `errors.py`, num lugar só.
 
+A montagem dos routers carrega uma decisão da RNF3: todos ganham a dependência
+que agenda o export do snapshot a cada mutação bem-sucedida, **menos**
+`/snapshots`. O motivo está ao lado da chamada.
+
 O `uvicorn` sobe pela fábrica, não por uma instância de módulo
 (`mise run dev` → `--factory ...main:create_app`). A diferença importa:
 importar este módulo não lê o ambiente e não abre banco. Um
@@ -12,10 +16,11 @@ importar este módulo não lê o ambiente e não abre banco. Um
 ela não usa — a engine dela é a de memória.
 """
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.adapters.inbound.http import errors
+from app.adapters.inbound.http.deps import schedule_snapshot_export
 from app.adapters.inbound.http.routers import (
     alerts,
     allocations,
@@ -23,6 +28,7 @@ from app.adapters.inbound.http.routers import (
     members,
     planning,
     projects,
+    snapshots,
     sprints,
     squads,
 )
@@ -55,6 +61,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         docs_url="/docs",
         redoc_url=None,
     )
+    #: As dependências leem as configurações **desta** aplicação daqui, e não
+    #: do ambiente do processo (ver `deps.provide_settings`).
+    app.state.settings = config
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(config.cors_origins),
@@ -73,5 +82,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         planning.router,
         alerts.router,
     ):
-        app.include_router(router, prefix=API_PREFIX, responses=ERROR_RESPONSES)
+        app.include_router(
+            router,
+            prefix=API_PREFIX,
+            responses=ERROR_RESPONSES,
+            dependencies=[Depends(schedule_snapshot_export)],
+        )
+    #: `/snapshots` fica fora do agendamento automático de propósito (RNF3): a
+    #: importação `replace` não dispara export, e reexportar depois de um
+    #: export explícito seria escrever a pasta sincronizada duas vezes pelo
+    #: mesmo pedido.
+    app.include_router(snapshots.router, prefix=API_PREFIX, responses=ERROR_RESPONSES)
     return app

@@ -44,13 +44,11 @@ Três pontos menores seguem abertos, com premissa em vigor documentada na seçã
 do spec — siga a premissa, não pergunte de novo.
 
 Fases concluídas: **0** (scaffold), **1** (domínio puro), **2** (use cases com
-repositórios fake), **3** (persistência em SQLite) e **4** (API HTTP). Próxima:
-**Fase 5** (CLI + snapshot, seção 13 do spec).
+repositórios fake), **3** (persistência em SQLite), **4** (API HTTP) e **5**
+(CLI + snapshot). Próxima: **Fase 6** (shell do front, seção 13 do spec).
 
-Os dois endpoints de `/snapshots` da seção 8 **não** existem ainda: dependem do
-`SnapshotWriter`/`SnapshotReader`, que são entrega da Fase 5. A lista de
-endpoints do spec vive em `tests/http/test_app.py` e é conferida nas duas
-direções — falta e excesso.
+Todos os endpoints da seção 8 existem, `/snapshots` inclusive. A lista vive em
+`tests/http/test_app.py` e é conferida nas duas direções — falta e excesso.
 
 A consulta filtrada dos repositórios se chama `list_all`, não `list`: um método
 `list` no corpo da classe sombreia o builtin e quebra as anotações `list[X]` dos
@@ -107,3 +105,29 @@ Os testes de HTTP usam SQLite `:memory:` com `StaticPool`, e o schema é criado
 **rodando as migrations** contra essa conexão, injetada em
 `config.attributes["connection"]` (RNF2). Um `:memory:` morre com a conexão;
 com pool normal o Alembic migraria um banco descartável.
+
+O `fileConfig` do `migrations/env.py` roda com
+`disable_existing_loggers=False`. As migrations rodam dentro do processo de
+teste, e o default do `fileConfig` desligaria os loggers da aplicação — o do
+export automático entre eles.
+
+Export e import de snapshot passam por uma terceira porta, `SnapshotStore`
+(`dump`/`replace`), e não pelos oito repositórios: `replace` precisaria de um
+`delete` que membro, squad e sprint não têm por regra (seção 6.4, 6.5, D13).
+
+A tarefa de `BackgroundTasks` que agenda o export roda **antes** do `commit` da
+requisição (o teardown das dependências com `yield` vem depois dela) e **não**
+roda quando o endpoint levanta exceção. As duas coisas juntas é que fazem a
+RNF3 valer: a tarefa só arma o debounce, e o export sai 5 segundos depois, em
+sessão própria, com o dado já gravado.
+
+`SNAPSHOT_DIR` é obrigatório no ambiente, como `DATABASE_URL`, e as
+dependências o leem de `app.state.settings` (`provide_settings`) — não de
+`get_settings()`, senão a suíte escreveria na pasta sincronizada de verdade.
+
+O use case de importação é `use_cases/snapshots/import_.py`, com o sublinhado
+final: `import` é palavra reservada e `from ... import import` não existe.
+
+No `.gitignore`, `/data/` e `/snapshots/` são ancorados na raiz. Sem a barra
+inicial o padrão casa com qualquer nível, e `snapshots/` escondia do Git o
+pacote `application/use_cases/snapshots/`.

@@ -165,6 +165,33 @@ class MuteReasonRequired(DomainError):
         super().__init__("Silenciar um alerta exige um motivo.")
 
 
+class InvalidSnapshot(DomainError):
+    """Snapshot ilegível ou incoerente (RNF4).
+
+    Vale para as duas formas de estar errado: arquivo que não é o JSON
+    esperado e conjunto que não fecha — uma alocação apontando para uma
+    iniciativa que não está no snapshot, por exemplo. Nos dois casos a
+    restauração para antes de apagar qualquer coisa.
+    """
+
+    code: ClassVar[str] = "INVALID_SNAPSHOT"
+
+    def __init__(self, reason: str, **details: object) -> None:
+        super().__init__(f"Snapshot inválido: {reason}", reason=reason, **details)
+
+
+class SnapshotImportNotConfirmed(DomainError):
+    """§8: a importação é destrutiva e exige `?confirm=true`."""
+
+    code: ClassVar[str] = "SNAPSHOT_IMPORT_NOT_CONFIRMED"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "A importação apaga todos os dados e recria a partir do snapshot. "
+            "Confirme a operação para continuar."
+        )
+
+
 class InvalidTimestamp(DomainError):
     code: ClassVar[str] = "INVALID_TIMESTAMP"
 
@@ -238,6 +265,17 @@ class AllocationNotFound(NotFoundError):
         super().__init__(
             f"Alocação {allocation_id} não existe.",
             allocation_id=str(allocation_id),
+        )
+
+
+class SnapshotNotFound(NotFoundError):
+    code: ClassVar[str] = "SNAPSHOT_NOT_FOUND"
+
+    def __init__(self, path: str) -> None:
+        super().__init__(
+            f"Não há snapshot em {path}. Informe a pasta que tem os arquivos "
+            "JSON exportados.",
+            path=path,
         )
 
 

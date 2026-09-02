@@ -6,6 +6,10 @@ contrato fazem — não vire colisão de nome.
 
 Todos recebem uma `Session` e nenhum faz `commit`: a transação é do adapter de
 entrada (ver `session.py`).
+
+`SqlAlchemySnapshotStore` está aqui pelo mesmo motivo — mesma `Session`, mesmos
+mappers —, mas implementa `SnapshotStore` (§9), não uma porta de agregado: o
+escopo dele é o banco inteiro.
 """
 
 from app.adapters.outbound.persistence.repositories.allocation import (
@@ -23,6 +27,9 @@ from app.adapters.outbound.persistence.repositories.muted_alert import (
 from app.adapters.outbound.persistence.repositories.project import (
     SqlAlchemyProjectRepository,
 )
+from app.adapters.outbound.persistence.repositories.snapshot_store import (
+    SqlAlchemySnapshotStore,
+)
 from app.adapters.outbound.persistence.repositories.sprint import (
     SqlAlchemySprintRepository,
 )
@@ -39,6 +46,7 @@ __all__ = [
     "SqlAlchemyMemberRepository",
     "SqlAlchemyMutedAlertRepository",
     "SqlAlchemyProjectRepository",
+    "SqlAlchemySnapshotStore",
     "SqlAlchemySprintRepository",
     "SqlAlchemySquadMembershipRepository",
     "SqlAlchemySquadRepository",

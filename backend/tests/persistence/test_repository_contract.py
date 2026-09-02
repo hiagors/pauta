@@ -22,6 +22,7 @@ import pytest
 
 from app.domain.entities.member import Member
 from app.domain.entities.muted_alert import MutedAlert
+from app.domain.entities.project import Project
 from app.domain.entities.sprint import Sprint
 from app.domain.entities.squad import Squad
 from app.domain.ports.repositories import (
@@ -34,6 +35,7 @@ from app.domain.ports.repositories import (
     SquadMembershipRepository,
     SquadRepository,
 )
+from app.domain.ports.snapshot import SnapshotBundle, SnapshotStore
 from app.domain.value_objects.alert import AlertType
 from app.domain.value_objects.color import Color
 from app.domain.value_objects.initiative_status import InitiativeStatus
@@ -47,6 +49,7 @@ from tests.domain.conftest import uid
 
 
 def test_every_repository_satisfies_its_port(repos: Repositories) -> None:
+    assert isinstance(repos.store, SnapshotStore)
     assert isinstance(repos.projects, ProjectRepository)
     assert isinstance(repos.initiatives, InitiativeRepository)
     assert isinstance(repos.members, MemberRepository)
@@ -688,3 +691,127 @@ def test_unmuting_removes_the_row(repos: Repositories, mute: MutedAlert) -> None
     assert repos.muted_alerts.get(mute.id) is None
     assert repos.muted_alerts.list_all() == []
     repos.muted_alerts.delete(mute.id)
+
+
+# --------------------------------------------------------------------------- #
+# SnapshotStore (§9)
+# --------------------------------------------------------------------------- #
+#
+# A porta da Fase 5 entra na suíte de contrato como as outras: o fake e o
+# SQLAlchemy têm de se comportar igual, senão o teste de use case passa contra
+# um store que não é o que roda.
+
+
+def test_the_dump_brings_what_the_repositories_wrote(
+    repos: Repositories, world: World
+) -> None:
+    world.sprints(18, 19)
+    project = world.project("CRM")
+    initiative = world.initiative(project, "Reestruturação")
+    squad = world.squad("Dados-A")
+    member = world.member("Bianca Alves")
+    world.join(squad, member, 18)
+    world.allocate(initiative, 18, 19, squad=squad)
+
+    bundle = repos.store.dump()
+
+    assert bundle.projects == (project,)
+    assert bundle.initiatives == (initiative,)
+    assert bundle.members == (member,)
+    assert bundle.squads == (squad,)
+    assert len(bundle.squad_memberships) == 1
+    assert len(bundle.sprints) == 2
+    assert len(bundle.allocations) == 2
+
+
+def test_the_dump_of_an_empty_database_is_an_empty_bundle(
+    repos: Repositories,
+) -> None:
+    assert repos.store.dump() == SnapshotBundle()
+
+
+def test_the_dump_is_ordered_by_id(repos: Repositories) -> None:
+    """§9: as listas do snapshot saem ordenadas por `id`, e é a ordenação que
+    faz dois exports do mesmo dado darem o mesmo arquivo."""
+    for seed in (9, 1, 5):
+        repos.members.add(
+            Member.create(name=f"Membro {seed}", short_name=f"M{seed}", id=uid(seed))
+        )
+
+    ids = [member.id for member in repos.store.dump().members]
+
+    assert ids == [uid(1), uid(5), uid(9)]
+
+
+def test_replace_erases_what_was_there_and_writes_the_bundle(
+    repos: Repositories, world: World
+) -> None:
+    world.sprints(18, 18)
+    doomed = world.project("Vai embora")
+    kept = Project.create(name="Vem do snapshot", id=uid(500))
+
+    repos.store.replace(SnapshotBundle(projects=(kept,)))
+
+    assert repos.projects.get(doomed.id) is None
+    assert repos.projects.get(kept.id) == kept
+    assert repos.sprints.list_all() == [], "sprint também sai no replace (RNF4)"
+
+
+def test_replace_with_an_empty_bundle_empties_everything(
+    repos: Repositories, world: World
+) -> None:
+    world.sprints(18, 19)
+    project = world.project("CRM")
+    world.allocate(
+        world.initiative(project, "Reestruturação"), 18, squad=world.squad("Dados-A")
+    )
+
+    repos.store.replace(SnapshotBundle())
+
+    assert repos.store.dump() == SnapshotBundle()
+
+
+def test_what_replace_wrote_comes_back_by_the_repositories(
+    repos: Repositories,
+) -> None:
+    """O store e os repositórios falam do mesmo dado, não de duas cópias."""
+    sprint = Sprint.create(
+        number=18, start_date=date(2026, 8, 31), end_date=date(2026, 9, 11), id=uid(600)
+    )
+
+    repos.store.replace(SnapshotBundle(sprints=(sprint,)))
+
+    assert repos.sprints.get_by_number(18) == sprint
+
+
+def test_replace_does_not_share_the_entity_with_the_caller(
+    repos: Repositories,
+) -> None:
+    """Mesma regra dos outros repositórios: mutar depois de gravar não muda o
+    que está gravado."""
+    project = Project.create(name="Original", id=uid(700))
+    repos.store.replace(SnapshotBundle(projects=(project,)))
+
+    project.rename("Mudou depois")
+
+    assert repos.store.dump().projects[0].name == "Original"
+
+
+def test_the_dump_survives_a_replace_round_trip(
+    repos: Repositories, world: World
+) -> None:
+    """É o roundtrip da fase, no nível da porta: o que sai do `dump` volta pelo
+    `replace` sem perder nem inventar nada."""
+    world.sprints(18, 20)
+    project = world.project("CRM", color="#0052CC")
+    initiative = world.initiative(project, "Reestruturação", estimated_sprints=3)
+    member = world.member("Bianca Alves")
+    squad = world.squad("Dados-A")
+    world.join(squad, member, 18, 19)
+    world.allocate(initiative, 18, 19, squad=squad)
+    world.allocate(world.initiative(project, "Ajustes"), 20, member=member)
+    before = repos.store.dump()
+
+    repos.store.replace(before)
+
+    assert repos.store.dump() == before

@@ -40,6 +40,7 @@ from app.domain.ports.repositories import (
     SquadMembershipRepository,
     SquadRepository,
 )
+from app.domain.ports.snapshot import SnapshotStore
 from app.domain.value_objects.assignee import Assignee
 from app.domain.value_objects.color import Color
 from app.domain.value_objects.initiative_status import InitiativeStatus
@@ -50,6 +51,7 @@ from tests.application.fakes import (
     FakeMemberRepository,
     FakeMutedAlertRepository,
     FakeProjectRepository,
+    FakeSnapshotStore,
     FakeSprintRepository,
     FakeSquadMembershipRepository,
     FakeSquadRepository,
@@ -81,6 +83,7 @@ class Repositories(Protocol):
     sprints: SprintRepository
     allocations: AllocationRepository
     muted_alerts: MutedAlertRepository
+    store: SnapshotStore
 
 
 @dataclass
@@ -108,6 +111,21 @@ class Fakes:
     muted_alerts: FakeMutedAlertRepository = field(
         default_factory=FakeMutedAlertRepository
     )
+    #: Montado no `__post_init__` porque ele é uma **vista** dos oito de cima
+    #: (§9), e não um nono repositório com dado próprio.
+    store: FakeSnapshotStore = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.store = FakeSnapshotStore(
+            projects=self.projects,
+            initiatives=self.initiatives,
+            members=self.members,
+            squads=self.squads,
+            memberships=self.memberships,
+            sprints=self.sprints,
+            allocations=self.allocations,
+            muted_alerts=self.muted_alerts,
+        )
 
     def use_case[T](self, cls: type[T]) -> T:
         """Instancia o use case injetando as portas pelo nome do campo.

@@ -25,7 +25,12 @@ from app.adapters.outbound.persistence.models import Base
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    #: `disable_existing_loggers=False` porque as migrations rodam **dentro**
+    #: do processo em dois lugares (a suíte de HTTP e a de persistência, por
+    #: RNF2). O default do `fileConfig` desliga todo logger já criado, e o que
+    #: sumiria é o log da própria aplicação — o do export automático (RNF3),
+    #: por exemplo, que é a única notícia que se tem de um snapshot que falhou.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 #: Conexão injetada por quem chama, quando houver (ver docstring do módulo).
 injected_connection = config.attributes.get("connection")
