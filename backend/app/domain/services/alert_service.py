@@ -70,6 +70,10 @@ class AlertService:
 
         Iniciativas de projeto com `is_capacity_reserve` ficam fora da conta:
         quem está na sustentação sob demanda não fica travado (§3).
+
+        Squad **inativa** entra. É o único dos quatro alertas que o §7.3 não
+        qualifica com "ativa", e a assimetria é deliberada: inativar a squad não
+        apaga as duas frentes que ela ficou devendo naquela sprint.
         """
         for squad_id, squad_name in _sorted(snapshot.squads):
             initiatives = squad_initiatives(
@@ -174,9 +178,15 @@ class AlertService:
     ) -> Iterator[Alert]:
         """Membro ativo sem nenhuma frente numa sprint atual ou futura.
 
-        Aqui a reserva de capacidade **conta como trabalho**: os três efeitos da
-        flag estão listados no §3 e `MEMBER_IDLE` não é um deles, então quem
-        está só na sustentação não aparece como ocioso.
+        Reserva de capacidade **não** conta como trabalho aqui: é o que a
+        própria flag significa. Se a iniciativa de sustentação não entra em
+        contagem de capacidade (§3), quem está só nela tem capacidade livre — e
+        `MEMBER_IDLE` é exatamente a pergunta de capacidade que fez o D16
+        trocar `SQUAD_IDLE` por ele.
+
+        A mensagem separa os dois casos. Dizer "não está em nenhuma frente"
+        para quem está de plantão seria falso, e alerta que mente é alerta que
+        se aprende a ignorar.
 
         Sem teto (premissa A2 do §16): toda sprint da atual em diante entra.
         """
@@ -188,19 +198,32 @@ class AlertService:
                 snapshot,
                 member_id=member_id,
                 sprint_number=sprint_number,
-                include_capacity_reserve=True,
+                include_capacity_reserve=False,
             )
             if initiatives:
                 continue
+            reserve = effective_initiatives(
+                snapshot,
+                member_id=member_id,
+                sprint_number=sprint_number,
+                include_capacity_reserve=True,
+            )
             yield _build(
                 AlertType.MEMBER_IDLE,
                 sprint_number=sprint_number,
                 subject=EntityRef(EntityRefType.MEMBER, member_id, member_name),
-                initiatives=(),
+                initiatives=reserve,
                 extra=(),
                 message=(
-                    f"{member_name} não está em nenhuma frente na "
-                    f"Sprint {sprint_number}."
+                    (
+                        f"{member_name} está só em reserva de capacidade na "
+                        f"Sprint {sprint_number}: {_join(reserve)}."
+                    )
+                    if reserve
+                    else (
+                        f"{member_name} não está em nenhuma frente na "
+                        f"Sprint {sprint_number}."
+                    )
                 ),
             )
 
@@ -211,11 +234,17 @@ class AlertService:
     def _empty_squad(
         self, snapshot: PlanningSnapshot, sprint_number: int
     ) -> Iterator[Alert]:
-        """Squad com alocação na sprint e ninguém na composição dela (RN-S2).
+        """Squad **ativa** com alocação na sprint e ninguém na composição (RN-S2).
 
         Informativo, nunca bloqueio: planejar antes de contratar é legítimo.
+
+        Aqui o §7.3 escreve "squad ativa", ao contrário do `SQUAD_OVERLOADED`:
+        cobrar composição de uma squad que foi desativada é pedir contratação
+        para um agrupamento que acabou.
         """
         for squad_id, squad_name in _sorted(snapshot.squads):
+            if not snapshot.squad_is_active(squad_id):
+                continue
             initiatives = squad_initiatives(
                 snapshot,
                 squad_id=squad_id,

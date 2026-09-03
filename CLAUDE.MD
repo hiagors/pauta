@@ -172,9 +172,12 @@ A grade e a lista leem a **mesma** resposta de `GET /planning/grid`. Alternar
 Grade|Lista não custa requisição, e a lista não tem endpoint próprio: barra é
 exatamente "responsável, sprint inicial, sprint final".
 
-A grade só traz iniciativa que tem alocação na janela (`get_grid` parte das
-`allocations`). Iniciativa nova aparece lá **depois** de alocada, e o caminho
-para alocá-la é o botão "Alocar" do backlog.
+A grade traz iniciativa **viva** mesmo sem barra na janela: `PLANNED`,
+`IN_PROGRESS` e `DEPRIORITIZED` viram linha com `bars: []`, para a célula vazia
+com o `+` ter onde existir e para quem perdeu todas as alocações não sumir da
+tela (achado `C3`). `BACKLOG` fica fora — o caminho dela é o botão "Alocar" do
+backlog — e `DONE`/`CANCELLED` também, por RN7. Com filtro de squad ou de
+pessoa, as linhas vazias somem.
 
 Não existe endpoint de mover alocação (§8). "Mover" e "Estender até" são
 `POST /allocations` no intervalo novo e `DELETE /allocations` na sobra —
@@ -302,6 +305,33 @@ do zero contra um banco recém-migrado — cria sprint, pessoa, squad, composiç
 projeto, iniciativa, aloca pelo backlog e confere a grade e o painel. Ele mora
 no scratchpad, não no repositório: depende de Chrome e de servidor no ar, o que
 não é `mise run test`.
+
+## Revisão de código (docs/revisao-fases-0-5.md)
+
+O documento é a lista de achados abertos, não histórico: quando um fecha, a
+linha vira **fechado** na tabela do §1 e a seção sai. Fechados até agora: o
+grupo de contrato inteiro (`N1` a `N4`, `C1` a `C3`). Seguem abertos `A1`–`A4`,
+`M1`–`M3`, `T1`–`T4` e `V1`.
+
+`SQUAD_OVERLOADED` vê squad inativa; `EMPTY_SQUAD` não. O §7.3 qualifica o
+sujeito com "ativa" em três dos quatro alertas e não no primeiro, e a assimetria
+é deliberada. Quem separa os dois é `PlanningSnapshot.inactive_squad_ids` —
+`squads` passou a carregar **todas**, e o default vazio de `inactive_squad_ids`
+quer dizer "nenhuma inativa", que é o certo para uma fotografia montada à mão.
+
+Reserva de capacidade **não** preenche a sprint de ninguém: quem está só no
+Plantão dispara `MEMBER_IDLE`, com mensagem própria ("está só em reserva de
+capacidade"). Dizer "não está em nenhuma frente" para quem está de plantão seria
+falso, e alerta que mente se aprende a ignorar.
+
+A mensagem do 409 da RN8 nomeia quem ocupa a célula. O domínio não busca nome —
+`plan_allocation` recebe `occupant_names` do use case, e sem o mapa a frase volta
+a ser genérica. É o que mantém a porta pura sem descumprir a RN8.
+
+`tests/http/test_app.py` confere o contrato em três níveis, todos nas duas
+direções: as 38 rotas, os campos de cada resposta (`RESPONSE_FIELDS`) e os
+filtros de query (`QUERY_PARAMETERS`). Campo novo numa resposta quebra o teste, e
+o caminho é escrevê-lo no §8 antes de acrescentá-lo à transcrição.
 
 ## Nomes nas fixtures e nos docs
 

@@ -310,8 +310,24 @@ class AllocationConflict(ConflictError):
         sprint_number: int,
         occupant_kind: str,
         occupant_id: UUID,
+        occupant_name: str | None = None,
     ) -> None:
-        quem = "uma squad" if occupant_kind == "squad" else "um membro"
+        """RN8 pede "a mensagem apontando quem já está lá".
+
+        Por isso o nome entra: sem ele a frase dizia o **tipo** do ocupante, e
+        quem lê o 409 não descobre de quem precisa falar para liberar a célula.
+        O domínio não busca esse nome — quem o resolve é o use case, que tem
+        repositório; sem nome a frase volta a ser a genérica, que é o que vale
+        para quem chama `plan_allocation` só com ids.
+        """
+        if occupant_name is None:
+            quem = "uma squad" if occupant_kind == "squad" else "um membro"
+        else:
+            quem = (
+                f"a squad {occupant_name}"
+                if occupant_kind == "squad"
+                else occupant_name
+            )
         super().__init__(
             f"A iniciativa já tem {quem} como responsável na Sprint "
             f"{sprint_number}. Uma iniciativa tem um responsável por sprint.",
@@ -319,6 +335,7 @@ class AllocationConflict(ConflictError):
             sprint_number=sprint_number,
             occupant_kind=occupant_kind,
             occupant_id=str(occupant_id),
+            occupant_name=occupant_name,
         )
 
 

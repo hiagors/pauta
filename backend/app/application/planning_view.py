@@ -173,15 +173,20 @@ def load_snapshot(
 ) -> PlanningSnapshot:
     """A fotografia do plano na janela, pronta para o `AlertService`.
 
-    `squads` e `members` levam **apenas** os ativos: é a premissa A3 do §16
-    (quem é inativado só desaparece) implementada num lugar só. Alocação ou
-    membership que aponte para alguém fora desses mapas é ignorada pelo
-    domínio.
+    `members` leva **apenas** os ativos: é a premissa A3 do §16 (quem é
+    inativado só desaparece) implementada num lugar só, e é o que os dois
+    alertas de membro do §7.3 pedem ao dizer "membro ativo". Alocação ou
+    membership que aponte para alguém fora do mapa é ignorada pelo domínio.
+
+    `squads` leva **todas**, com as inativas marcadas à parte. O §7.3 qualifica
+    "squad ativa" só em `EMPTY_SQUAD`, e é o domínio que aplica a distinção —
+    aqui ela seria aplicada aos quatro alertas de uma vez.
 
     O nome que viaja é o `short_name` do membro: é ele que aparece nas
     mensagens de alerta ("Ana está nas squads...", §7.3) e nos chips da UI.
     """
     cells = allocations.list_all(sprint_ids=window.ids)
+    known_squads = squads.list_all()
     refs = load_initiative_refs(
         projects=projects,
         initiatives=initiatives.list_by_ids({cell.initiative_id for cell in cells}),
@@ -204,7 +209,10 @@ def load_snapshot(
             )
             for link in memberships.list_all(sprint_ids=window.ids)
         ),
-        squads={squad.id: squad.name for squad in squads.list_all(active=True)},
+        squads={squad.id: squad.name for squad in known_squads},
+        inactive_squad_ids=frozenset(
+            squad.id for squad in known_squads if not squad.is_active
+        ),
         members={
             member.id: member.short_name for member in members.list_all(active=True)
         },

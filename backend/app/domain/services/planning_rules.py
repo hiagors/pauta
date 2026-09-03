@@ -19,6 +19,7 @@ from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from itertools import pairwise
+from types import MappingProxyType
 from uuid import UUID
 
 from app.domain.entities.sprint import Sprint
@@ -82,9 +83,14 @@ class MembershipFact:
 class PlanningSnapshot:
     """Tudo o que o cálculo de alertas precisa, sem repositório.
 
-    `squads` e `members` contêm **apenas** os ativos: é assim que a premissa A3
-    do §16 (inativo só desaparece) fica implementada num lugar só. Alocação ou
-    membership que aponte para alguém fora desses mapas é ignorada.
+    `members` contém **apenas** os ativos: é assim que a premissa A3 do §16
+    (inativo só desaparece) fica implementada num lugar só, e é o que os dois
+    alertas de membro do §7.3 pedem ao dizer "membro ativo".
+
+    `squads` contém **todas**, ativas ou não. A tabela do §7.3 qualifica
+    "squad ativa" em `EMPTY_SQUAD` e não qualifica em `SQUAD_OVERLOADED`, e a
+    assimetria é deliberada: inativar uma squad não apaga o que ela ficou
+    devendo. Quem separa as duas é `inactive_squad_ids`.
     """
 
     sprint_numbers: tuple[int, ...]
@@ -92,7 +98,13 @@ class PlanningSnapshot:
     memberships: tuple[MembershipFact, ...] = ()
     squads: Mapping[UUID, str] = field(default_factory=dict)
     members: Mapping[UUID, str] = field(default_factory=dict)
+    #: Vazio significa "nenhuma inativa", que é o que vale em quase todo
+    #: cenário — e é o default certo para quem monta uma fotografia à mão.
+    inactive_squad_ids: frozenset[UUID] = frozenset()
     current_sprint_number: int | None = None
+
+    def squad_is_active(self, squad_id: UUID) -> bool:
+        return squad_id not in self.inactive_squad_ids
 
     @property
     def idle_from(self) -> int | None:
@@ -308,6 +320,7 @@ def plan_allocation(
     assignee: Assignee,
     existing_sprint_numbers: Collection[int],
     occupied: Mapping[int, Assignee],
+    occupant_names: Mapping[UUID, str] = MappingProxyType({}),
 ) -> AllocationPlan:
     """Decide célula por célula o que fazer no intervalo pedido.
 
@@ -318,6 +331,10 @@ def plan_allocation(
     - célula ocupada por **outro** responsável -> `AllocationConflict` (RN8):
       uma iniciativa tem um responsável por sprint;
     - célula livre -> `to_create`.
+
+    `occupant_names` é o que a RN8 pede ao dizer "a mensagem apontando quem já
+    está lá". É opcional porque o domínio não sabe buscar nome: quem o resolve
+    é o use case. Sem o mapa, a frase sai genérica.
     """
     to_create: list[int] = []
     already_existing: list[int] = []
@@ -337,6 +354,7 @@ def plan_allocation(
                 sprint_number=number,
                 occupant_kind=occupant.kind.value,
                 occupant_id=occupant.id,
+                occupant_name=occupant_names.get(occupant.id),
             )
     return AllocationPlan(
         to_create=tuple(to_create),

@@ -3,10 +3,15 @@
 Formato pensado para renderizar direto: linhas agrupadas por projeto, barras já
 consolidadas pelo domínio e cor já resolvida. O front desenha barras, não
 células.
+
+A grade não parte só das alocações: iniciativa viva sem barra na janela também
+vira linha, com `bars` vazio. É o que faz a célula vazia com o `+` do §10.3 ter
+onde existir, e o que impede uma iniciativa em andamento que perdeu todas as
+alocações de sumir da tela sem caminho de volta.
 """
 
 from collections import defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -45,6 +50,19 @@ from app.domain.services.alert_service import AlertService
 from app.domain.services.bar_consolidation import AllocationCell, consolidate_bars
 from app.domain.services.planning_rules import PlanningSnapshot
 from app.domain.value_objects.alert import AlertType
+from app.domain.value_objects.initiative_status import InitiativeStatus
+
+#: Quem ganha linha na grade mesmo sem barra na janela.
+#:
+#: `BACKLOG` fica fora porque o caminho dela é o botão "Alocar" do backlog
+#: (§10.3), e mostrá-la aqui duplicaria a tela. `DONE` e `CANCELLED` ficam fora
+#: porque não aceitam nova alocação (RN7): a célula com `+` só saberia devolver
+#: 422.
+_ROWLESS_STATUSES = (
+    InitiativeStatus.PLANNED,
+    InitiativeStatus.IN_PROGRESS,
+    InitiativeStatus.DEPRIORITIZED,
+)
 
 
 @dataclass(frozen=True)
@@ -96,6 +114,10 @@ class GetGrid:
                 member_id=cell.member_id,
             )
         ]
+        rowless = self._rowless(
+            criteria, allocated={cell.initiative_id for _, cell in kept}
+        )
+        initiatives.update({initiative.id: initiative for initiative in rowless})
         return GridView(
             sprints=tuple(
                 GridSprintView(
@@ -107,7 +129,11 @@ class GetGrid:
                 )
                 for sprint in window.selected
             ),
-            groups=self._groups(kept, initiatives),
+            groups=self._groups(
+                kept,
+                initiatives,
+                rowless=tuple(initiative.id for initiative in rowless),
+            ),
             alerts_by_sprint=self._alerts_by_sprint(snapshot),
         )
 
@@ -155,13 +181,39 @@ class GetGrid:
                 return False
         return True
 
+    def _rowless(
+        self, criteria: GridQuery, *, allocated: Collection[UUID]
+    ) -> list[Initiative]:
+        """Iniciativas que viram linha vazia (C3).
+
+        Só quando não há filtro de responsável: pedir a grade de uma squad e
+        receber linha vazia de iniciativa que ela não toca contradiz o filtro.
+        O filtro de projeto, esse continua valendo — ele é sobre a iniciativa,
+        não sobre quem a executa.
+        """
+        if criteria.squad_id is not None or criteria.member_id is not None:
+            return []
+        return [
+            initiative
+            for initiative in self.initiatives.list_all(
+                project_id=criteria.project_id, statuses=_ROWLESS_STATUSES
+            )
+            if initiative.id not in allocated
+        ]
+
     def _groups(
         self,
         kept: Sequence[tuple[int, Allocation]],
         initiatives: Mapping[UUID, Initiative],
+        *,
+        rowless: Sequence[UUID] = (),
     ) -> tuple[GridGroupView, ...]:
         """Agrupa por projeto, que é quem carrega a cor e a leitura vertical."""
         by_initiative: dict[UUID, list[AllocationCell]] = defaultdict(list)
+        # Semear com lista vazia é o que faz `consolidate_bars` devolver `()` e
+        # a linha existir sem barra nenhuma.
+        for initiative_id in rowless:
+            by_initiative[initiative_id] = []
         for number, cell in kept:
             by_initiative[cell.initiative_id].append(
                 AllocationCell(

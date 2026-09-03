@@ -6,7 +6,9 @@ decisão célula por célula — criar, ignorar, reclamar ou reportar como falta
 — é `plan_allocation`, no domínio.
 """
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
+from uuid import UUID
 
 from app.application.dto.allocations import (
     AllocateRangeInput,
@@ -82,6 +84,7 @@ class AllocateRange:
             assignee=assignee,
             existing_sprint_numbers=tuple(by_number),
             occupied={number: cell.assignee for number, cell in occupants.items()},
+            occupant_names=self._occupant_names(occupants.values()),
         )
         created = [
             Allocation.create(
@@ -118,6 +121,25 @@ class AllocateRange:
                 self.alert_service.evaluate(snapshot, load_mutes(self.muted_alerts))
             ),
         )
+
+    def _occupant_names(self, cells: Iterable[Allocation]) -> dict[UUID, str]:
+        """Nome de quem já ocupa cada célula, para a mensagem da RN8.
+
+        Busca por id, e não pelos ativos: a squad que ocupa a célula pode ter
+        sido desativada depois de alocada, e a frase continua tendo que dizer
+        de quem se trata.
+        """
+        assignees = [cell.assignee for cell in cells]
+        squad_ids = {a.id for a in assignees if a.is_squad}
+        member_ids = {a.id for a in assignees if not a.is_squad}
+        names = {squad.id: squad.name for squad in self.squads.list_by_ids(squad_ids)}
+        names.update(
+            {
+                member.id: member.short_name
+                for member in self.members.list_by_ids(member_ids)
+            }
+        )
+        return names
 
     def _ensure_assignee_exists(self, assignee: Assignee) -> None:
         """Responsável fantasma é 404, não alocação órfã."""

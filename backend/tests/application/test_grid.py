@@ -201,3 +201,118 @@ def test_an_empty_grid_has_no_sprints_and_no_groups(fakes: Fakes) -> None:
     assert view.sprints == ()
     assert view.groups == ()
     assert view.alerts_by_sprint == {}
+
+
+class TestRowsWithoutBars:
+    """C3: iniciativa viva sem barra na janela também vira linha.
+
+    Uma célula vazia com o `+` (§10.3) pressupõe uma linha. Sem isso, uma
+    iniciativa em andamento que perdeu todas as alocações some da grade e não
+    há como realocá-la de lá.
+    """
+
+    def test_a_live_initiative_without_allocation_becomes_an_empty_row(
+        self, world: World, fakes: Fakes
+    ) -> None:
+        world.sprints(18, 20)
+        project = world.project("Aurora")
+        world.initiative(project, "Catálogo V1", status=InitiativeStatus.IN_PROGRESS)
+
+        view = fakes.use_case(GetGrid).execute()
+
+        assert [group.project.name for group in view.groups] == ["Aurora"]
+        (row,) = view.groups[0].rows
+        assert row.initiative.name == "Catálogo V1"
+        assert row.bars == ()
+
+    def test_allocations_outside_the_window_still_leave_an_empty_row(
+        self, world: World, fakes: Fakes
+    ) -> None:
+        world.sprints(18, 22)
+        initiative = world.initiative(
+            world.project("Aurora"), "Catálogo V1", status=InitiativeStatus.PLANNED
+        )
+        world.allocate(initiative, 21, 22, squad=world.squad("Alfa"))
+
+        view = fakes.use_case(GetGrid).execute(GridQuery(sprint_from=18, sprint_to=19))
+
+        (row,) = view.groups[0].rows
+        assert row.bars == ()
+
+    def test_backlog_stays_out(self, world: World, fakes: Fakes) -> None:
+        """O caminho dela é o botão "Alocar" do backlog (§10.3)."""
+        world.sprints(18, 20)
+        world.initiative(world.project("Aurora"), "Catálogo V1")
+
+        assert fakes.use_case(GetGrid).execute().groups == ()
+
+    def test_terminal_statuses_stay_out(self, world: World, fakes: Fakes) -> None:
+        """RN7: `DONE` e `CANCELLED` não aceitam alocação, então uma célula com
+        `+` só saberia devolver 422."""
+        world.sprints(18, 20)
+        project = world.project("Aurora")
+        world.initiative(project, "Concluída", status=InitiativeStatus.DONE)
+        world.initiative(project, "Cancelada", status=InitiativeStatus.CANCELLED)
+
+        assert fakes.use_case(GetGrid).execute().groups == ()
+
+    def test_a_deprioritized_initiative_comes_back_as_a_row(
+        self, world: World, fakes: Fakes
+    ) -> None:
+        """É o trabalho parado, que o §10.3 quer revisitável."""
+        world.sprints(18, 20)
+        world.initiative(
+            world.project("Aurora"),
+            "Catálogo V1",
+            status=InitiativeStatus.DEPRIORITIZED,
+        )
+
+        (group,) = fakes.use_case(GetGrid).execute().groups
+        assert [row.initiative.status for row in group.rows] == [
+            InitiativeStatus.DEPRIORITIZED
+        ]
+
+    def test_an_assignee_filter_suppresses_the_empty_rows(
+        self, world: World, fakes: Fakes
+    ) -> None:
+        """Pedir a grade de uma squad e receber linha de iniciativa que ela não
+        toca contradiz o filtro."""
+        world.sprints(18, 20)
+        project = world.project("Aurora")
+        allocated = world.initiative(
+            project, "Catálogo V1", status=InitiativeStatus.IN_PROGRESS
+        )
+        world.initiative(project, "Portal Externo", status=InitiativeStatus.PLANNED)
+        squad = world.squad("Alfa")
+        world.allocate(allocated, 18, squad=squad)
+
+        view = fakes.use_case(GetGrid).execute(GridQuery(squad_id=squad.id))
+
+        assert [row.initiative.name for row in view.groups[0].rows] == ["Catálogo V1"]
+
+    def test_the_project_filter_still_applies_to_the_empty_rows(
+        self, world: World, fakes: Fakes
+    ) -> None:
+        """O filtro de projeto é sobre a iniciativa, não sobre quem a executa."""
+        world.sprints(18, 20)
+        aurora = world.project("Aurora")
+        boreal = world.project("Boreal")
+        world.initiative(aurora, "Catálogo V1", status=InitiativeStatus.PLANNED)
+        world.initiative(boreal, "Portal Externo", status=InitiativeStatus.PLANNED)
+
+        view = fakes.use_case(GetGrid).execute(GridQuery(project_id=aurora.id))
+
+        assert [group.project.name for group in view.groups] == ["Aurora"]
+
+    def test_an_allocated_initiative_is_not_duplicated(
+        self, world: World, fakes: Fakes
+    ) -> None:
+        world.sprints(18, 20)
+        initiative = world.initiative(
+            world.project("Aurora"), "Catálogo V1", status=InitiativeStatus.IN_PROGRESS
+        )
+        world.allocate(initiative, 18, 19, squad=world.squad("Alfa"))
+
+        (group,) = fakes.use_case(GetGrid).execute().groups
+        assert len(group.rows) == 1
+        assert len(group.rows[0].bars) == 1

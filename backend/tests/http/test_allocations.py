@@ -67,7 +67,38 @@ def test_a_second_assignee_in_the_same_cell_is_409(api: Api) -> None:
     )
 
     assert response.status_code == 409
-    assert response.json()["error"]["code"] == "ALLOCATION_CONFLICT"
+    error = response.json()["error"]
+    assert error["code"] == "ALLOCATION_CONFLICT"
+    # RN8: "a mensagem apontando quem já está lá" — o nome, não o tipo.
+    assert error["message"] == (
+        "A iniciativa já tem a squad Alfa como responsável na Sprint 19. "
+        "Uma iniciativa tem um responsável por sprint."
+    )
+    assert error["details"]["occupant_name"] == "Alfa"
+    assert error["details"]["occupant_id"] == alfa["id"]
+
+
+def test_the_conflict_message_names_a_person_by_the_short_name(api: Api) -> None:
+    """O rótulo curto é o que a UI já usa nas barras e nos seletores."""
+    api.sprints()
+    initiative = api.project("Aurora")["initiatives"][0]
+    ana = api.member("Ana Martins", short_name="Ana")
+    api.allocate(initiative["id"], 18, 18, member_id=ana["id"])
+
+    response = api.post(
+        "/allocations",
+        json={
+            "initiative_id": initiative["id"],
+            "from_sprint_number": 18,
+            "to_sprint_number": 18,
+            "squad_id": api.squad("Alfa")["id"],
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["message"].startswith(
+        "A iniciativa já tem Ana como responsável na Sprint 18."
+    )
 
 
 def test_a_done_initiative_refuses_a_new_allocation(api: Api) -> None:

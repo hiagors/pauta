@@ -57,6 +57,140 @@ ENDPOINTS: tuple[tuple[str, str], ...] = (
     ("post", "/snapshots/import"),
 )
 
+#: Os campos de cada resposta do §8, transcritos como a lista de rotas acima.
+#:
+#: Existe por causa do `C2` da revisão: até aqui o contrato era conferido por
+#: rota, e um campo inventado numa resposta passava em silêncio — foi assim que
+#: seis deles entraram sem ninguém notar. Campo novo numa resposta agora quebra
+#: este teste, e o caminho é escrevê-lo no §8 antes de acrescentá-lo aqui.
+RESPONSE_FIELDS: dict[str, tuple[str, ...]] = {
+    "AlertOut": (
+        "entity_refs",
+        "fingerprint",
+        "is_muted",
+        "message",
+        "mute_id",
+        "mute_reason",
+        "severity",
+        "sprint_number",
+        "subject_id",
+        "type",
+    ),
+    "AlertsOut": ("items", "muted_count"),
+    "AllocationCellOut": ("id", "sprint_number"),
+    "AllocationOut": (
+        "id",
+        "initiative_id",
+        "member_id",
+        "sprint_id",
+        "sprint_number",
+        "squad_id",
+    ),
+    "AllocationResultOut": (
+        "alerts",
+        "already_existed",
+        "created",
+        "initiative_status",
+        "missing_sprint_numbers",
+    ),
+    "BacklogItemOut": ("initiative", "project"),
+    "BacklogOut": ("items", "summary"),
+    "BacklogProjectOut": ("color", "id", "name"),
+    "BacklogSummaryOut": ("count", "estimated_sprints_total", "items_without_estimate"),
+    "DeallocationResultOut": ("alerts", "initiative_status", "removed"),
+    "EntityRefOut": ("id", "name", "type"),
+    "ErrorBody": ("code", "details", "message"),
+    "ErrorEnvelope": ("error",),
+    "GridAssigneeOut": ("id", "kind", "name"),
+    "GridBarOut": (
+        "allocation_ids",
+        "assignee",
+        "from_sprint_number",
+        "to_sprint_number",
+    ),
+    "GridGroupOut": ("project", "rows"),
+    "GridInitiativeOut": ("id", "layer", "name", "priority", "status"),
+    "GridOut": ("alerts_by_sprint", "groups", "sprints"),
+    "GridProjectOut": ("color", "id", "is_capacity_reserve", "name"),
+    "GridRowOut": ("bars", "initiative"),
+    "GridSprintOut": ("end_date", "id", "is_current", "number", "start_date"),
+    "InitiativeOut": (
+        "description",
+        "entered_at",
+        "estimated_sprints",
+        "id",
+        "layer",
+        "name",
+        "priority",
+        "project_id",
+        "status",
+    ),
+    "MemberOut": ("id", "is_active", "name", "role", "short_name"),
+    "MutedAlertOut": ("alert_type", "created_at", "fingerprint", "id", "reason"),
+    "ProjectDetailOut": ("initiatives", "project"),
+    "ProjectOut": (
+        "color",
+        "description",
+        "id",
+        "is_active",
+        "is_capacity_reserve",
+        "name",
+    ),
+    "SnapshotCountsOut": (
+        "allocations",
+        "initiatives",
+        "members",
+        "muted_alerts",
+        "projects",
+        "sprints",
+        "squad_memberships",
+        "squads",
+    ),
+    "SnapshotExportOut": ("counts", "paths"),
+    "SnapshotImportOut": ("counts", "mode", "path"),
+    "SprintCompositionOut": ("members", "sprint_id", "sprint_number"),
+    "SprintOut": ("end_date", "id", "is_current", "number", "start_date"),
+    "SprintProposalOut": ("end_date", "number", "start_date"),
+    "SquadDetailOut": ("memberships", "squad"),
+    "SquadOut": (
+        "id",
+        "is_active",
+        "members",
+        "name",
+        "representative_member_id",
+        "sprint_number",
+    ),
+}
+
+#: Os filtros de query do §8, endpoint a endpoint. A outra metade do `C2`: o
+#: `?descending=` do backlog entrou sem estar escrito em lugar nenhum.
+QUERY_PARAMETERS: dict[tuple[str, str], tuple[str, ...]] = {
+    ("get", "/alerts"): ("include_muted", "sprint_from", "sprint_to"),
+    ("get", "/allocations"): (
+        "initiative_id",
+        "member_id",
+        "project_id",
+        "sprint_from",
+        "sprint_to",
+        "squad_id",
+    ),
+    ("get", "/initiatives"): ("layer", "priority", "project_id", "q", "status"),
+    ("get", "/members"): ("active",),
+    ("get", "/planning/backlog"): ("descending", "order_by"),
+    ("get", "/planning/grid"): (
+        "member_id",
+        "project_id",
+        "sprint_from",
+        "sprint_to",
+        "squad_id",
+    ),
+    ("get", "/projects"): ("active", "q"),
+    ("get", "/sprints"): ("from", "to"),
+    ("get", "/squads"): ("active", "sprint_number"),
+    ("get", "/squads/{squad_id}/memberships"): ("sprint_from", "sprint_to"),
+    ("post", "/snapshots/import"): ("confirm",),
+}
+
 
 def _operations(schema: dict[str, Any]) -> set[tuple[str, str]]:
     """`(método, caminho sem prefixo)` de tudo que o OpenAPI publica."""
@@ -105,6 +239,45 @@ def test_the_api_has_no_endpoint_beyond_the_spec(api: Api) -> None:
     ]
 
     assert not extra, "endpoints que o §8 não pede:\n  " + "\n  ".join(extra)
+
+
+def test_every_response_carries_exactly_the_fields_of_the_spec(api: Api) -> None:
+    """§14: não inventar campo. `C2` da revisão das Fases 0 a 5.
+
+    Compara nome a nome, nas duas direções: campo a mais quebra, campo a menos
+    quebra, e schema de resposta novo que ninguém transcreveu também.
+    """
+    published = api.client.get(OPENAPI_URL).json()["components"]["schemas"]
+    responses = {
+        name: tuple(sorted(body.get("properties", {})))
+        for name, body in published.items()
+        if name.endswith("Out") or name in {"ErrorBody", "ErrorEnvelope"}
+    }
+    expected = {name: tuple(sorted(fields)) for name, fields in RESPONSE_FIELDS.items()}
+
+    assert responses == expected
+
+
+def test_every_query_filter_is_one_the_spec_asks_for(api: Api) -> None:
+    """A outra metade: filtro de query que o §8 não pede."""
+    schema = api.client.get(OPENAPI_URL).json()
+    published = {
+        (method, path.removeprefix(API_PREFIX)): tuple(
+            sorted(
+                parameter["name"]
+                for parameter in operation.get("parameters", ())
+                if parameter["in"] == "query"
+            )
+        )
+        for path, operations in schema["paths"].items()
+        for method, operation in operations.items()
+        if any(
+            parameter["in"] == "query" for parameter in operation.get("parameters", ())
+        )
+    }
+    expected = {key: tuple(sorted(names)) for key, names in QUERY_PARAMETERS.items()}
+
+    assert published == expected
 
 
 def test_every_path_is_under_the_versioned_prefix(api: Api) -> None:

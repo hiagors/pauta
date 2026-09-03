@@ -3,9 +3,9 @@
 > Revisão do backend contra [`spec.md`](spec.md) (revisão 2), feita em 02/09/2026,
 > no fim da Fase 5 e antes da Fase 6.
 >
-> Este documento é **diagnóstico**. Nada aqui foi corrigido. Cada achado tem um
-> identificador estável (`A1`, `N2`, …) para poder ser fechado ou recusado um a um;
-> quando um for resolvido, marque-o na tabela do §1 e apague a seção.
+> Cada achado tem um identificador estável (`A1`, `N2`, …). Quando um é fechado, a
+> linha dele fica marcada na tabela do §1 e a seção correspondente sai do documento —
+> o que resta aqui é o que continua aberto.
 >
 > Onde este documento e o `spec.md` divergirem, o `spec.md` vence.
 
@@ -41,27 +41,27 @@ Severidade:
 - **Risco** — não diverge, mas esconde regressão: uma quebra futura não apareceria.
 - **Ruído** — morto, duplicado ou inconsistente. Não quebra nada hoje.
 
-| # | Achado | Severidade | Onde |
-|---|---|---|---|
-| `A1` | `Path` numa porta de domínio | Risco | `domain/ports/snapshot.py:56` |
-| `A2` | `get_session_factory` lê o ambiente, não `app.state` | Desvio | `http/deps.py:73` |
-| `A3` | `Ports` tipado com as classes concretas | Risco | `http/deps.py:127` |
-| `A4` | `use_case()` injeta por nome com `hasattr` | Risco | `http/deps.py:166` |
-| `N1` | `SQUAD_OVERLOADED` ignora squad inativa | Desvio | `alert_service.py:66` |
-| `N2` | A mensagem do RN8 não diz quem já está lá | Desvio | `domain/errors.py:303` |
-| `N3` | `MEMBER_IDLE` conta reserva como trabalho — 4º ponto aberto não declarado | Desvio | `alert_service.py:172` |
-| `N4` | `alerts_by_sprint` exclui os silenciados | Interpretação | `get_grid.py:244` |
-| `C1` | Campos de resposta e de query fora do §8 | Desvio | vários routers |
-| `C2` | O teste de contrato cobre rota, não corpo | Risco | `tests/http/test_app.py` |
-| `C3` | A grade não devolve linha sem alocação na janela | Lacuna | `get_grid.py:158` |
-| `M1` | Oito símbolos mortos | Ruído | vários |
-| `M2` | `AlertService` como classe injetável que ninguém injeta | Ruído | `alert_service.py:40` |
-| `M3` | `runtime_checkable` e `pytest-asyncio` sem uso real | Ruído | `domain/ports/`, `pyproject.toml` |
-| `T1` | `test_every_repository_satisfies_its_port` não testa nada | Risco | `test_repository_contract.py:51` |
-| `T2` | O teste de coalescing por HTTP não testa coalescing | Risco | `tests/http/test_snapshots.py:191` |
-| `T3` | A memoização do debouncer nunca é exercitada | Risco | `http/deps.py:214` |
-| `T4` | Dois testes-fumaça remanescentes | Ruído | `tests/domain/test_smoke.py` |
-| `V1` | Nomes de teste em português em `tests/domain/` | Ruído | `tests/domain/` |
+| # | Achado | Severidade | Onde | Situação |
+|---|---|---|---|---|
+| `A1` | `Path` numa porta de domínio | Risco | `domain/ports/snapshot.py:56` | aberto |
+| `A2` | `get_session_factory` lê o ambiente, não `app.state` | Desvio | `http/deps.py:73` | aberto |
+| `A3` | `Ports` tipado com as classes concretas | Risco | `http/deps.py:127` | aberto |
+| `A4` | `use_case()` injeta por nome com `hasattr` | Risco | `http/deps.py:166` | aberto |
+| `N1` | `SQUAD_OVERLOADED` ignora squad inativa | Desvio | `alert_service.py:66` | **fechado** |
+| `N2` | A mensagem do RN8 não diz quem já está lá | Desvio | `domain/errors.py:303` | **fechado** |
+| `N3` | `MEMBER_IDLE` conta reserva como trabalho — 4º ponto aberto não declarado | Desvio | `alert_service.py:172` | **fechado** |
+| `N4` | `alerts_by_sprint` exclui os silenciados | Interpretação | `get_grid.py:244` | **fechado** |
+| `C1` | Campos de resposta e de query fora do §8 | Desvio | vários routers | **fechado** |
+| `C2` | O teste de contrato cobre rota, não corpo | Risco | `tests/http/test_app.py` | **fechado** |
+| `C3` | A grade não devolve linha sem alocação na janela | Lacuna | `get_grid.py:158` | **fechado** |
+| `M1` | Oito símbolos mortos | Ruído | vários | aberto |
+| `M2` | `AlertService` como classe injetável que ninguém injeta | Ruído | `alert_service.py:40` | aberto |
+| `M3` | `runtime_checkable` e `pytest-asyncio` sem uso real | Ruído | `domain/ports/`, `pyproject.toml` | aberto |
+| `T1` | `test_every_repository_satisfies_its_port` não testa nada | Risco | `test_repository_contract.py:51` | aberto |
+| `T2` | O teste de coalescing por HTTP não testa coalescing | Risco | `tests/http/test_snapshots.py:191` | aberto |
+| `T3` | A memoização do debouncer nunca é exercitada | Risco | `http/deps.py:214` | aberto |
+| `T4` | Dois testes-fumaça remanescentes | Ruído | `tests/domain/test_smoke.py` | aberto |
+| `V1` | Nomes de teste em português em `tests/domain/` | Ruído | `tests/domain/` | aberto |
 
 ---
 
@@ -159,153 +159,7 @@ o feixe não tem é silenciosamente omitido.
 
 ---
 
-## 3. Regras do §7
-
-### `N1` — `SQUAD_OVERLOADED` ignora squad inativa, e o §7.3 não pede isso
-
-A tabela do §7.3 qualifica o estado do sujeito em três dos quatro alertas:
-
-| Tipo | Condição, como está escrita |
-|---|---|
-| `SQUAD_OVERLOADED` | "**Squad** com alocação em mais de uma iniciativa na mesma sprint…" |
-| `MEMBER_CONFLICT` | "**Membro ativo** com mais de uma iniciativa efetiva…" |
-| `MEMBER_IDLE` | "**Membro ativo** sem nenhuma iniciativa efetiva…" |
-| `EMPTY_SQUAD` | "**Squad ativa** com alocação numa sprint…" |
-
-`SQUAD_OVERLOADED` é o único sem qualificador, e a assimetria parece deliberada: o
-§6.5 diz que squad é agrupamento com prazo e que inativá-la não apaga o que ela fez.
-
-Mas `application/planning_view.py:180-212` monta a fotografia só com os ativos:
-
-```python
-squads={squad.id: squad.name for squad in squads.list_all(active=True)},
-```
-
-e `alert_service.py:74` itera `snapshot.squads`. Uma squad inativada com duas frentes
-na mesma sprint não gera aviso nenhum.
-
-Não é bug de implementação — é o código decidindo uma coisa que o spec decidiu
-diferente, num ponto em que o spec foi explícito nos outros três.
-
-### `N2` — A mensagem do RN8 não diz quem já está lá
-
-RN8, literalmente:
-
-> tentar um segundo responsável para a mesma célula é 409, **com a mensagem apontando
-> quem já está lá**.
-
-`domain/errors.py:303-324` produz:
-
-> "A iniciativa já tem **uma squad** como responsável na Sprint 19. Uma iniciativa tem
-> um responsável por sprint."
-
-O tipo do ocupante, não a identidade. O `occupant_id` e o `occupant_kind` vão em
-`details`, então a UI consegue montar a frase sozinha — mas a mensagem, que é o que o
-RN8 nomeia, não cumpre o que está escrito.
-
-Resolver não é trivial de propósito: quem levanta é `plan_allocation`, no domínio, que
-recebe `Mapping[int, Assignee]` e não tem — nem pode ter — repositório para buscar o
-nome. Ou o use case resolve o nome antes de chamar, ou a mensagem continua genérica.
-
-### `N3` — `MEMBER_IDLE` conta reserva de capacidade como trabalho
-
-`alert_service.py:172-206`:
-
-```python
-initiatives = effective_initiatives(
-    snapshot, member_id=member_id, sprint_number=sprint_number,
-    include_capacity_reserve=True,      # <- quem está só no Plantão não é ocioso
-)
-```
-
-O docstring justifica pelo §3, que lista três efeitos da flag `is_capacity_reserve` e
-não inclui este. O spec sustenta os dois lados:
-
-**A favor do que está no código.** §6.8: "Iniciativas de projetos com
-`is_capacity_reserve = true` são removidas desse conjunto antes de qualquer
-verificação **de conflito**." Ociosidade não é conflito.
-
-**Contra.** §3, sobre a mesma flag: as iniciativas de reserva "não aparecem no backlog
-nem em **contagem de capacidade**". `MEMBER_IDLE` é exatamente uma pergunta de
-capacidade — é a pergunta que fez o D16 trocar `SQUAD_IDLE` por ele.
-
-O ponto não é qual leitura vence. É que o spec é **genuinamente ambíguo aqui**, o
-código escolheu, e essa escolha está documentada só no docstring do serviço — não no
-§16, que é onde as três premissas em vigor estão registradas justamente para não serem
-redecididas em cada leitura.
-
-Na prática é um quarto item de §16, com premissa em vigor "reserva conta como
-trabalho para efeito de ociosidade", e dói na Fase 8, junto com `A2` do §16 (o teto do
-`MEMBER_IDLE`), porque as duas mexem no mesmo volume do painel.
-
-### `N4` — `alerts_by_sprint` exclui os silenciados
-
-`get_grid.py:244-261` filtra `if alert.is_muted: continue` ao montar o mapa do
-cabeçalho da coluna.
-
-O §8 diz que `alerts_by_sprint` **não** é afetado pelos filtros de
-`squad_id`/`member_id`/`project_id`, e não fala de silenciamento. O docstring
-argumenta bem — "se o silenciamento não apagasse o ícone, silenciar não silenciaria
-nada" — e é coerente com o §7.3, que manda o painel mostrar os não silenciados.
-
-Fica registrado como **interpretação**, não desvio: é uma decisão de contrato tomada
-em código, num campo que o §8 descreve por escrito.
-
----
-
-## 4. Contrato da API (§8)
-
-A lista de rotas está fechada nas duas direções por `tests/http/test_app.py`, e
-confere: os 38 pares método/caminho do §8, `/snapshots` inclusive, nenhum a mais. É o
-teste certo, e ele funciona.
-
-### `C1` — Campos de resposta e de query que o §8 não pede
-
-O §14 diz "não invente campo, tela ou endpoint que não esteja aqui".
-
-| Onde | O que foi acrescentado | Defesa |
-|---|---|---|
-| `GET /planning/backlog` | query `?descending=` | O §8 diz que a ordem por `size` põe nulos por último "em qualquer direção" — o que só faz sentido se a direção existir. Mas o parâmetro não está escrito. |
-| `GET /alerts` | `muted_count` no envelope | O §7.3 pede o contador expansível do painel. O envelope `{items, muted_count}` em si não está no §8. |
-| `POST /snapshots/export` | `counts` | O §8 pede "→ caminhos gerados", só. |
-| `POST /snapshots/import` | `counts` | idem |
-| `DELETE /allocations` e `/allocations/{id}` | `DeallocationResultOut` inteiro | O §8 não especifica a resposta. É simetria com o `POST`. |
-| `DELETE /members/{id}`, `/squads/{id}` | 200 com a entidade, não 204 | O §8 diz só "soft delete". Justificado no router (a UI atualiza a linha sem recarregar). |
-
-Nenhum é grave, todos estão justificados no código. Vale a decisão explícita: ou
-entram no §8, ou saem.
-
-### `C2` — O teste de contrato cobre rota, não corpo
-
-Consequência direta de `C1`: `test_app.py` compara `(método, caminho)` contra a
-transcrição do §8. Um campo inventado numa resposta passa sem ruído — foi assim que os
-seis itens da tabela acima entraram sem ninguém notar.
-
-### `C3` — A grade não devolve linha para iniciativa sem alocação na janela
-
-`get_grid.py:158-166` monta `by_initiative` a partir das células que sobraram do
-filtro. Uma iniciativa cujas alocações estão **todas fora** da janela — ou que não tem
-alocação nenhuma — não vira linha, e o projeto dela some do `groups`.
-
-Isso conflita com o §10.3, que desenha a grade assim:
-
-> Célula vazia mostra um `+` no hover que abre o diálogo de alocação já com iniciativa
-> e sprint preenchidos.
-
-Uma célula vazia pressupõe uma linha. Hoje o backend só fornece linha para quem já tem
-barra na janela, então:
-
-- uma iniciativa em `BACKLOG` nunca aparece na grade (correto — o caminho é o botão
-  "Alocar" do `/backlog`, §10.3);
-- uma iniciativa `IN_PROGRESS` ou `DEPRIORITIZED` que perdeu todas as alocações
-  **desaparece da grade**, e não há como realocá-la de lá.
-
-Não é desvio do §8 — o exemplo de payload dele só mostra linhas com barra. É uma
-lacuna de contrato que a Fase 7 vai encontrar na primeira tentativa de arrastar.
-
----
-
-## 5. Código morto e abstração sem uso
+## 3. Código morto e abstração sem uso
 
 ### `M1` — Oito símbolos mortos
 
@@ -364,7 +218,7 @@ junto.
 
 ---
 
-## 6. Testes que passam sem testar nada
+## 4. Testes que passam sem testar nada
 
 ### `T1` — `test_every_repository_satisfies_its_port`
 
@@ -466,7 +320,7 @@ inteira continuaria verde, `T2` inclusive.
 
 ---
 
-## 7. Convenção
+## 5. Convenção
 
 ### `V1` — Nomes de teste em português em `tests/domain/`
 
@@ -490,7 +344,7 @@ a convenção só tenha se firmado a partir da Fase 2 e ninguém tenha voltado.
 
 ---
 
-## 8. O que foi conferido e está certo
+## 6. O que foi conferido e está certo
 
 Para o diagnóstico ser justo, e para estas partes não serem revisitadas sem motivo:
 
@@ -519,22 +373,23 @@ Para o diagnóstico ser justo, e para estas partes não serem revisitadas sem mo
 - **RNF1 e RNF2.** `PRAGMA foreign_keys=ON` e `pauta_casefold` registrados por
   conexão, no listener de `connect`; schema dos testes criado rodando as migrations,
   nunca `metadata.create_all()`.
+- **§8, a lista de rotas.** Fechada nas duas direções por `tests/http/test_app.py`:
+  os 38 pares método/caminho do §8, `/snapshots` inclusive, nenhum a mais. Desde o
+  fechamento do `C2`, os campos de cada resposta e os filtros de query são conferidos
+  do mesmo jeito, também nas duas direções.
 - **§5, regra de dependência.** Os três testes de varredura de import (domínio,
   aplicação, e o guarda "a varredura realmente vê imports") são o desenho certo:
   incluem um teste contra o pior modo de falha, que é o scanner passar vazio.
 
 ---
 
-## 9. Ordem sugerida
+## 7. Ordem do que resta
 
-Sem prescrever correção — só a ordem em que os achados se destravam:
+O grupo de contrato — `N1` a `N4`, `C1` a `C3` — foi fechado primeiro, depois das dez
+fases, porque o front já dependia dele e cada dia só encarecia. O que sobra:
 
-1. **Antes da Fase 6:** `N3` (decidir e mover para o §16 ou o §7.3) e `C1` (decidir e
-   mover para o §8). Os dois são decisões de spec, não de código, e a Fase 6 vai gerar
-   os tipos do front a partir do OpenAPI — o contrato deve estar fechado antes disso.
-2. **Quando der:** `T1`, `T3` e `A2`, que são o mesmo problema visto de três ângulos —
-   o caminho de produção do wiring não é exercitado nem verificado.
-3. **Junto com o próximo toque em cada arquivo:** `M1`, `M2`, `M3`, `V1`.
-4. **Fase 7:** `C3` aparece sozinho na primeira tela de grade.
-5. **Fase 8:** `N1` e `N2` aparecem no painel de alertas, junto com `A2` e `A3` do
-   §16.
+1. **`T1`, `T3` e `A2`**, que são o mesmo problema visto de três ângulos: o caminho de
+   produção do wiring não é exercitado nem verificado. `A3` e `A4` andam junto — os
+   quatro se resolvem no mesmo arquivo.
+2. **`T2`**, que é curto e independente.
+3. **`M1`, `M2`, `M3`, `T4`, `V1` e `A1`**, o ruído. Nenhum quebra nada hoje.

@@ -271,8 +271,12 @@ class TestCenarioE:
         )
         assert of_type(service.evaluate(sem_diana), AlertType.MEMBER_IDLE) == []
 
-    def test_quem_esta_so_na_reserva_nao_e_ocioso(self) -> None:
-        """§3 lista três efeitos da flag e MEMBER_IDLE não é um deles."""
+    def test_quem_esta_so_na_reserva_e_ocioso(self) -> None:
+        """N3: reserva não consome capacidade, então não preenche a sprint.
+
+        A flag existe para a sustentação não travar a pessoa (§3, §15). Quem
+        está só nela tem capacidade livre — que é a pergunta do MEMBER_IDLE.
+        """
         snapshot = PlanningSnapshot(
             sprint_numbers=(20,),
             allocations=(member_alloc(20, PLANTAO, DIANA),),
@@ -280,7 +284,30 @@ class TestCenarioE:
             members={DIANA: "Diana"},
             current_sprint_number=20,
         )
-        assert of_type(service.evaluate(snapshot), AlertType.MEMBER_IDLE) == []
+        alerts = of_type(service.evaluate(snapshot), AlertType.MEMBER_IDLE)
+        assert [alert.subject_id for alert in alerts] == [DIANA]
+
+    def test_a_mensagem_de_quem_esta_so_na_reserva_diz_isso(self) -> None:
+        """Dizer "não está em nenhuma frente" para quem está de plantão seria
+        falso, e alerta que mente é alerta que se aprende a ignorar."""
+        snapshot = PlanningSnapshot(
+            sprint_numbers=(20,),
+            allocations=(member_alloc(20, PLANTAO, DIANA),),
+            squads={},
+            members={DIANA: "Diana"},
+            current_sprint_number=20,
+        )
+        (alerta,) = of_type(service.evaluate(snapshot), AlertType.MEMBER_IDLE)
+        assert alerta.message == (
+            "Diana está só em reserva de capacidade na Sprint 20: "
+            "Plantão / Sustentação."
+        )
+        refs = [
+            ref.name
+            for ref in alerta.entity_refs
+            if ref.type is EntityRefType.INITIATIVE
+        ]
+        assert refs == ["Sustentação"]
 
     def test_sem_sprint_iniciada_toda_a_janela_e_futura(self) -> None:
         snapshot = PlanningSnapshot(
@@ -346,6 +373,53 @@ class TestCenarioF:
             current_sprint_number=21,
         )
         assert of_type(service.evaluate(snapshot), AlertType.EMPTY_SQUAD) == []
+
+    def test_squad_inativa_nao_dispara(self) -> None:
+        """N1: o §7.3 escreve "squad ativa" aqui, e só aqui do lado da squad.
+
+        Cobrar composição de um agrupamento que acabou é pedir contratação para
+        um time que não existe mais.
+        """
+        snapshot = PlanningSnapshot(
+            sprint_numbers=(21,),
+            allocations=(squad_alloc(21, COBRANCA, GAMA),),
+            squads={GAMA: "Gama"},
+            inactive_squad_ids=frozenset({GAMA}),
+            current_sprint_number=21,
+        )
+        assert of_type(service.evaluate(snapshot), AlertType.EMPTY_SQUAD) == []
+
+
+class TestSquadInativa:
+    """N1: a assimetria do §7.3 entre os dois alertas de squad."""
+
+    def snapshot(self) -> PlanningSnapshot:
+        return PlanningSnapshot(
+            sprint_numbers=(19,),
+            allocations=(
+                squad_alloc(19, AURORA_CATALOGO, ALFA),
+                squad_alloc(19, BOREAL_PORTAL, ALFA),
+            ),
+            squads={ALFA: "Alfa"},
+            inactive_squad_ids=frozenset({ALFA}),
+            current_sprint_number=19,
+        )
+
+    def test_squad_inativa_ainda_fica_sobrecarregada(self) -> None:
+        """`SQUAD_OVERLOADED` é o único dos quatro que o §7.3 não qualifica com
+        "ativa": inativar a squad não apaga as duas frentes que ela deixou."""
+        alerts = of_type(service.evaluate(self.snapshot()), AlertType.SQUAD_OVERLOADED)
+        assert [alert.subject_id for alert in alerts] == [ALFA]
+
+    def test_a_squad_ativa_continua_disparando(self) -> None:
+        ativa = PlanningSnapshot(
+            sprint_numbers=(19,),
+            allocations=self.snapshot().allocations,
+            squads={ALFA: "Alfa"},
+            current_sprint_number=19,
+        )
+        alerts = of_type(service.evaluate(ativa), AlertType.SQUAD_OVERLOADED)
+        assert [alert.subject_id for alert in alerts] == [ALFA]
 
 
 class TestCenarioG:

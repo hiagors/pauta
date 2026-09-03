@@ -690,8 +690,23 @@ visual, **jamais bloqueio**.
 |---|---|---|
 | `SQUAD_OVERLOADED` | `WARNING` | Squad com alocação em mais de uma iniciativa na mesma sprint, desconsiderando iniciativas de projetos com `is_capacity_reserve` |
 | `MEMBER_CONFLICT` | `WARNING` | Membro ativo com mais de uma iniciativa **efetiva** (§6.8) não-reserva na mesma sprint — tipicamente por estar em duas squads naquela sprint |
-| `MEMBER_IDLE` | `INFO` | Membro ativo sem nenhuma iniciativa efetiva numa sprint atual ou futura |
+| `MEMBER_IDLE` | `INFO` | Membro ativo sem nenhuma iniciativa efetiva **não-reserva** numa sprint atual ou futura |
 | `EMPTY_SQUAD` | `INFO` | Squad ativa com alocação numa sprint, mas sem nenhum `SquadMembership` naquela sprint |
+
+Duas leituras da tabela que já custaram divergência entre spec e código, e por isso
+estão escritas:
+
+- **`SQUAD_OVERLOADED` é o único que não qualifica o sujeito com "ativa", e é
+  deliberado.** Uma squad inativada com duas frentes na mesma sprint continua sendo
+  duas frentes que alguém vai ter que absorver. `EMPTY_SQUAD`, que **é** qualificado,
+  segue a regra oposta pelo motivo simétrico: cobrar composição de um agrupamento que
+  acabou é pedir contratação para um time que não existe mais.
+- **Reserva de capacidade não preenche a sprint de ninguém.** Quem está só num projeto
+  com `is_capacity_reserve` dispara `MEMBER_IDLE`, porque é isso que a flag significa:
+  se a iniciativa não entra em contagem de capacidade (§3), quem está só nela tem
+  capacidade livre — que é exatamente a pergunta que fez o D16 criar este alerta. A
+  mensagem distingue os dois casos, para não afirmar que está sem nada quem está de
+  plantão.
 
 `Severity` é enum em inglês (`WARNING`, `INFO`) e o valor viaja assim até a UI, que
 faz o mapa para o rótulo em português no `Lozenge`.
@@ -800,6 +815,7 @@ GET    /api/v1/planning/grid             ?sprint_from=&sprint_to=&squad_id=
                                          &member_id=&project_id=
                                          default: trimestre corrente (RN13)
 GET    /api/v1/planning/backlog          ?order_by=priority|size|entered_at
+                                         &descending=false
 
 GET    /api/v1/alerts                    ?sprint_from=&sprint_to=&include_muted=false
                                          default: da sprint atual (RN12) até a última
@@ -807,9 +823,27 @@ GET    /api/v1/alerts                    ?sprint_from=&sprint_to=&include_muted=
 POST   /api/v1/alerts/mute               { fingerprint, alert_type, reason }
 DELETE /api/v1/alerts/mute/{mute_id}
 
-POST   /api/v1/snapshots/export          → caminhos gerados
+POST   /api/v1/snapshots/export          → caminhos gerados e contagem por entidade
 POST   /api/v1/snapshots/import?confirm=true   { path, mode: "replace" }  destrutivo
 ```
+
+**Formato das respostas que não têm exemplo abaixo.** Estão aqui porque o §14 proíbe
+inventar campo, e um campo que existe no código e não no contrato é a mesma coisa que
+um inventado — ninguém sabe se pode contar com ele.
+
+- `GET /alerts` responde `{ items, muted_count }`. O contador é o que alimenta o
+  "N silenciados" expansível do painel (§7.3): sem ele, a UI não teria como saber que
+  existe algo atrás do contador sem uma segunda chamada com `include_muted=true`.
+- `POST /snapshots/export` e `POST /snapshots/import` respondem `counts`, o número de
+  linhas por entidade, além dos caminhos. É o que torna o resultado conferível sem
+  abrir os arquivos.
+- `DELETE /allocations` e `DELETE /allocations/{id}` respondem
+  `{ removed, initiative_status, alerts }` — a simetria do `POST`. Desalocar também
+  muda status (RN2) e também mexe nos alertas da sprint tocada; devolver 204 obrigaria
+  a UI a recarregar a grade para descobrir as duas coisas.
+- `DELETE /members/{id}` e `DELETE /squads/{id}` respondem **200 com a entidade**, não
+  204: é soft delete, a linha continua existindo com `is_active = false`, e devolvê-la
+  deixa a UI atualizar a linha em vez de recarregar a lista.
 
 ### `POST /api/v1/allocations`
 
@@ -880,9 +914,20 @@ Formato pensado para renderizar direto, sem o front recalcular nada:
   Gantt.
 - `assignee.kind` é `"squad"` ou `"member"`.
 - Por RN8, as barras de uma linha nunca se sobrepõem.
+- **Linha sem barra existe.** Toda iniciativa em `PLANNED`, `IN_PROGRESS` ou
+  `DEPRIORITIZED` vira linha, com `bars: []` quando não tem alocação nenhuma na
+  janela. É o que faz a célula vazia com o `+` do §10.3 ter onde existir, e o que
+  impede uma iniciativa em andamento que perdeu todas as alocações de sumir da tela
+  sem caminho de volta. `BACKLOG` fica de fora — o caminho dela é o botão "Alocar" do
+  `/backlog` —, e `DONE` e `CANCELLED` também, porque não aceitam alocação (RN7).
+  Com `squad_id` ou `member_id` no filtro, as linhas vazias somem: pedir a grade de um
+  responsável e receber linha de iniciativa que ele não toca contradiz o filtro.
 - `alerts_by_sprint` **não** é afetado pelos filtros de `squad_id` / `member_id` /
   `project_id`: o ícone no cabeçalho da coluna reporta a sprint inteira, senão filtrar
   esconderia justamente o conflito que se quer ver.
+- `alerts_by_sprint` **é** afetado pelo silenciamento: alerta silenciado não entra. O
+  ícone é o resumo da sprint, e se silenciar não o apagasse, silenciar não silenciaria
+  nada (§7.3).
 
 ### `GET /api/v1/planning/backlog`
 
