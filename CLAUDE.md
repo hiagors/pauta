@@ -31,7 +31,8 @@ divergirem, o spec vence.
 - `mise run setup` — prepara a máquina do zero
 - `mise run dev` — sobe API (:8000) e front (:4321)
 - `mise run test` — pytest + vitest
-- `mise run lint` — ruff + mypy --strict (backend) + tsc --noEmit (front)
+- `mise run lint` — ruff + `mypy --strict app` (backend inteiro, adapters
+  inclusive) + tsc --noEmit (front)
 - `mise run types` — regenera os tipos do front a partir do OpenAPI
 
 ## Estado
@@ -40,8 +41,11 @@ Spec na revisão 2. D15–D17 confirmados em 02/09/2026: alocação é na inicia
 (não no projeto), o terceiro alerta é `MEMBER_IDLE` (não `SQUAD_IDLE`), e a
 unicidade da alocação é `(initiative_id, sprint_id)`.
 
-Três pontos menores seguem abertos, com premissa em vigor documentada na seção 16
-do spec — siga a premissa, não pergunte de novo.
+A seção 16 do spec está **vazia**: os três pontos que estavam lá foram decididos
+em 03/09/2026 e viraram regra. Trimestre corrente é o **civil** (RN13);
+`MEMBER_IDLE` tem horizonte de três sprints — a atual e as duas seguintes
+(`IDLE_HORIZON_SPRINTS`, §7.3); e membro inativado com composição em sprint
+futura ganha aviso discreto na matriz, com a membership preservada (RN-S3).
 
 As dez fases da seção 13 estão concluídas: **0** (scaffold), **1** (domínio
 puro), **2** (use cases com repositórios fake), **3** (persistência em SQLite),
@@ -76,14 +80,31 @@ A busca `?q=` usa a função `pauta_casefold`, registrada em cada conexão SQLit
 deste sistema são todos em português. O `PRAGMA foreign_keys=ON` entra pelo
 mesmo listener de `connect`, e pelo mesmo motivo: é por conexão, não por banco.
 
-Os 36 testes de contrato de `tests/persistence/` rodam duas vezes, contra os
-fakes e contra o SQLAlchemy. Porta nova entra na suíte de contrato, não em
-teste separado por implementação.
+Os testes de contrato de `tests/persistence/` rodam duas vezes, contra os fakes
+e contra o SQLAlchemy. Porta nova entra na suíte de contrato, não em teste
+separado por implementação. O contrato **estrutural** compara
+`inspect.signature` método a método, parametrizado por porta: o `isinstance`
+que estava ali antes aceitava sete métodos com as assinaturas todas erradas.
 
 `deps.py` é onde a transação abre e fecha: `provide_session` faz `commit` no
 fim e `rollback` na exceção — inclusive na `DomainError` que vira 4xx. `Ports`
 tem os mesmos nomes de campo que os use cases e `use_case()` injeta por nome,
-igual ao `Fakes` da suíte de use case; não existe fábrica por use case.
+igual ao `Fakes` da suíte de use case; não existe fábrica por use case. Não há
+`hasattr` no meio: campo do use case que o feixe não tenha é `AttributeError`
+na primeira requisição, com o nome do campo na mensagem.
+
+Os campos de `Ports` são os `Protocol` do domínio, **não** as classes concretas
+do SQLAlchemy. `build()` é o único ponto do projeto em que uma implementação é
+atribuída a uma variável tipada com a porta, e portanto o único em que o `mypy`
+confere que ela cumpre a assinatura — é por isso que `mise run lint` roda
+`--strict` em `app` inteiro, e não só no domínio e na aplicação. `isinstance`
+contra `Protocol` não serve para isso: confere só nome de atributo.
+
+Toda configuração desta aplicação vem de `app.state.settings`, `database_url`
+inclusive: `provide_session_factory` memoiza engine e fábrica em `app.state`, e
+não num `lru_cache` de módulo. Duas aplicações no mesmo processo (a suíte cria
+uma por teste) não podem herdar a engine uma da outra, e `create_app(settings)`
+tem que valer para todos os campos.
 
 O `Clock` entra pela dependência `provide_clock`, e não dentro de
 `Ports.build`, para a suíte de HTTP congelar a data. `is_current` (RN12) e a
@@ -117,11 +138,29 @@ Export e import de snapshot passam por uma terceira porta, `SnapshotStore`
 (`dump`/`replace`), e não pelos oito repositórios: `replace` precisaria de um
 `delete` que membro, squad e sprint não têm por regra (seção 6.4, 6.5, D13).
 
+`SnapshotStore` e `SnapshotBundle` moram em `domain/ports/`; `SnapshotWriter` e
+`SnapshotReader` moram em **`application/ports/`**. As duas últimas trocam
+`pathlib.Path`, e "só stdlib" é literal demais para pegar isso: o que estava no
+domínio não era uma biblioteca, era o conceito "sistema de arquivos". Exportar
+para uma pasta é caso de uso. Há um teste de varredura que proíbe `pathlib`,
+`os`, `shutil`, `tempfile`, `io`, `socket` e `subprocess` no domínio.
+
 A tarefa de `BackgroundTasks` que agenda o export roda **antes** do `commit` da
 requisição (o teardown das dependências com `yield` vem depois dela) e **não**
 roda quando o endpoint levanta exceção. As duas coisas juntas é que fazem a
 RNF3 valer: a tarefa só arma o debounce, e o export sai 5 segundos depois, em
 sessão própria, com o dado já gravado.
+
+O timer do debounce nasce dentro dessa tarefa, que o Starlette roda numa worker
+do anyio — e `Thread.daemon` **herda de quem cria a thread**. Por isso a fábrica
+default é `durable_timer`, que põe `daemon = False` explícito: sem ela o
+interpretador não espera o timer, e o export dos últimos cinco segundos morria
+com o processo, exatamente o que o debounce existe para não fazer.
+
+A suíte de HTTP troca `provide_timer_factory`, e **só** ele. Trocar
+`provide_snapshot_debouncer` inteiro, como já foi, deixava a memoização em
+`app.state` — que é o mecanismo do coalescing — sem cobertura nenhuma: um
+debouncer novo por requisição passaria verde.
 
 `SNAPSHOT_DIR` é obrigatório no ambiente, como `DATABASE_URL`, e as
 dependências o leem de `app.state.settings` (`provide_settings`) — não de
@@ -141,6 +180,10 @@ rede de segurança para um override apontado para dentro do repo.
 `lib/api.ts` é o único lugar que chama `fetch`. Os tipos vêm de `lib/types.ts`,
 gerado por `mise run types` **com a API no ar** — o comando lê
 `http://127.0.0.1:8000/api/v1/openapi.json`, não um arquivo.
+
+Todo caminho de erro sai como `ApiError`, o `JSON.parse` incluído: um corpo que
+não é JSON — proxy no meio, 502 em HTML — vira `UNEXPECTED_RESPONSE`, e não um
+`SyntaxError` cru que `describeError` não sabe ler.
 
 `QueryOf<K>` e `BodyOf<K>` do `api.ts` leem `operations[K]` do OpenAPI em vez de
 repetir a lista de filtros. Filtro novo no backend chega ao front regerando os
@@ -255,6 +298,15 @@ A matriz grava sprint a sprint (`sprint_from == sprint_to`). O `PUT` de
 intervalo exige que **todas** as sprints do intervalo existam (404, ao
 contrário da RN5 da alocação), e uma célula é sempre uma sprint só.
 
+O que trava enquanto a matriz grava é a **sprint**, não a célula
+(`pendingSprint`). O `PUT` manda a composição inteira daquela sprint, montada a
+partir do cache: marcar uma segunda pessoa da mesma sprint antes do refetch leria
+o mesmo cache velho e desfaria a primeira marcação em silêncio.
+
+`inactiveWithComposition` alimenta o aviso da RN-S3 — quem foi inativado e ainda
+tem composição na janela. O dado sai da resposta que a tela já tem:
+`GET /squads?sprint_number=` traz a composição inteira, ativos e inativos.
+
 A janela da matriz vem de uma chamada por sprint (`GET /squads?sprint_number=`),
 cada uma trazendo todas as squads com a composição daquela sprint. É o que faz
 a célula responder as duas perguntas do §10.3 — "está nesta squad?" e "em qual
@@ -325,12 +377,13 @@ projeto, iniciativa, aloca pelo backlog e confere a grade e o painel. Ele mora
 no scratchpad, não no repositório: depende de Chrome e de servidor no ar, o que
 não é `mise run test`.
 
-## Revisão de código (docs/revisao-fases-0-5.md)
+## Revisão de código (docs/revisao-v1.md)
 
 O documento é a lista de achados abertos, não histórico: quando um fecha, a
-linha vira **fechado** na tabela do §1 e a seção sai. Fechados até agora: o
-grupo de contrato inteiro (`N1` a `N4`, `C1` a `C3`). Seguem abertos `A1`–`A4`,
-`M1`–`M3`, `T1`–`T4` e `V1`.
+linha vira **fechado** na tabela do §1 e a seção sai. Em 03/09/2026 sobrou **um**
+aberto, o `F1`: nenhuma das 15 ilhas do front tem teste, e fechá-lo pede `jsdom`
+mais uma testing library — dependências fora do §4.1, e o §14 manda perguntar
+antes. Todo o resto está fechado.
 
 `SQUAD_OVERLOADED` vê squad inativa; `EMPTY_SQUAD` não. O §7.3 qualifica o
 sujeito com "ativa" em três dos quatro alertas e não no primeiro, e a assimetria
@@ -351,6 +404,16 @@ a ser genérica. É o que mantém a porta pura sem descumprir a RN8.
 direções: as 38 rotas, os campos de cada resposta (`RESPONSE_FIELDS`) e os
 filtros de query (`QUERY_PARAMETERS`). Campo novo numa resposta quebra o teste, e
 o caminho é escrevê-lo no §8 antes de acrescentá-lo à transcrição.
+
+`evaluate_alerts` é função de módulo, não método de uma classe `AlertService`.
+Ela era instanciável "para ficar injetável", nada jamais injetou outra
+instância, e os quatro `field(default_factory=AlertService)` eram a única razão
+de o `use_case()` precisar de `hasattr`.
+
+Identificador de teste é identificador: nome de função, nome de classe e
+variável local vão em inglês. O que fica em português é o **nome próprio** da
+fixture — `PLANTAO`, `ENVIO`, `COBRANCA`, `CATALOGO`, do mesmo jeito que
+`AURORA` e `ANA`.
 
 ## Nomes nas fixtures e nos docs
 
