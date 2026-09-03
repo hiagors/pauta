@@ -18,7 +18,6 @@ dependencies = [
 [dependency-groups]
 dev = [
   "pytest~=9.1.1",
-  "pytest-asyncio~=1.4.0",
   "httpx~=0.28.1",
   "ruff~=0.16.5",
   "mypy~=2.3.1",
@@ -38,7 +37,6 @@ pythonpath = ["."]
 # `prepend` importa test module pelo nome de base.
 addopts = "-q --import-mode=importlib"
 consider_namespace_packages = true
-asyncio_mode = "strict"
 
 [tool.ruff]
 target-version = "py314"

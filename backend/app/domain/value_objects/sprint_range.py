@@ -33,9 +33,3 @@ class SprintRange:
 
     def __iter__(self) -> Iterator[int]:
         return iter(self.numbers)
-
-    def __contains__(self, number: int) -> bool:
-        return self.from_number <= number <= self.to_number
-
-    def __len__(self) -> int:
-        return self.to_number - self.from_number + 1

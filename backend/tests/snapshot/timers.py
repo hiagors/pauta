@@ -4,30 +4,15 @@ O debounce recebe a fábrica de timers pela porta da frente justamente para que
 a suíte não precise esperar cinco segundos de relógio de verdade — e para que
 "coalescer" possa ser verificado, e não cronometrado.
 
-- `ImmediateTimer` dispara no `start()`. Serve a quem quer o efeito (o arquivo
-  aparece depois da mutação) sem se importar com o intervalo.
-- `ManualTimer` só dispara quando o teste chama `fire()`. Serve a quem quer
-  verificar o cancelamento: é ele que mostra que três agendamentos em sequência
-  viram um export.
+`ManualTimer` só dispara quando o teste chama `fire()`, e é o único que existe:
+um timer que dispara sozinho no `start()` verificaria o efeito (o arquivo
+aparece) mas nunca o cancelamento — que é a propriedade que a RNF3 pede. Quem
+mostra que três agendamentos em sequência viram um export é o `cancelled` de
+cada timer que o `TimerSpy` guardou.
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-
-
-@dataclass
-class ImmediateTimer:
-    """Timer sem espera: `start()` chama a função na hora."""
-
-    delay: float
-    function: Callable[[], None]
-    cancelled: bool = False
-
-    def start(self) -> None:
-        self.function()
-
-    def cancel(self) -> None:
-        self.cancelled = True
 
 
 @dataclass

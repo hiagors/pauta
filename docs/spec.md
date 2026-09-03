@@ -129,9 +129,9 @@ Alembic         ~=1.19.1        migrations
 Pydantic        ~=2.13.5        apenas nos schemas de borda HTTP, não no domínio
 pydantic-settings ~=2.15.0      config/settings.py
 Typer           ~=0.27.2        CLI
-pytest          ~=9.1.1  + pytest-asyncio ~=1.4.0 + httpx ~=0.28.1
+pytest          ~=9.1.1  + httpx ~=0.28.1
 ruff            ~=0.16.5        lint + format
-mypy            ~=2.3.1         --strict em domain/ e application/
+mypy            ~=2.3.1         --strict em app/ inteiro (ver §11)
 
 Node            24 (Active LTS)
 pnpm            11.25.x
@@ -161,6 +161,11 @@ Notas que custaram tempo para descobrir e que não devem ser reaprendidas:
   Cuidado: `docs.sqlalchemy.org` serve a doc da 2.1 por padrão — não copie API que
   não existe na 2.0.
 - **mypy está no major 2**, cujos defaults de `--strict` diferem da era 1.x. Pinar.
+- **`pytest-asyncio` saiu da lista.** Ele esteve aqui desde a revisão 1 e nunca teve um
+  `async def` para rodar: os endpoints são síncronos (a `Session` do SQLAlchemy é), e o
+  `TestClient` também. Ficava com `asyncio_mode = "strict"` no `pyproject.toml` sem
+  nada em modo nenhum. Volta no dia em que existir o primeiro teste assíncrono — o
+  adapter de LLM da v2 é o candidato óbvio.
 - **TypeScript**: o npm serve 7.0.2 como `latest`, mas o Astro 7.2.10 é desenvolvido
   contra `typescript ^6.0.3`. Pinar `~6.0.3`.
 - **Node 22 está em Maintenance** (EOL 30/04/2027). O Astro 7 exige `>=22.12.0`, mas
@@ -1224,8 +1229,12 @@ concorrentes no mesmo app é pior que uma tela feia.
 - Teste da regra de dependência (§5).
 - Teste de roundtrip de snapshot: export → import `replace` → export produz arquivos
   idênticos.
-- `ruff` e `mypy --strict` em `domain/` e `application/` limpos. Adapters podem ser
-  menos rígidos.
+- `ruff` e `mypy --strict` em `app/` inteiro, adapters inclusive. A regra era "adapters
+  podem ser menos rígidos", e ela custou caro: o `Ports` de `http/deps.py` é o **único**
+  ponto do projeto em que uma implementação é atribuída a uma variável tipada com o
+  `Protocol` da porta, e portanto o único em que "o repositório cumpre a porta" seria
+  verificado. Fora do escopo do mypy, ninguém verificava — e o `isinstance` contra
+  `Protocol` que parecia cobrir isso só confere nome de atributo.
 - Cobertura não é meta. Alertas, alocação em intervalo, transição de status e
   composição de squad por sprint cobertos de verdade são.
 

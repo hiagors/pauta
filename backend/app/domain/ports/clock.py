@@ -5,10 +5,9 @@ Nada no domínio chama `date.today()`.
 """
 
 from datetime import date, datetime
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 
 
-@runtime_checkable
 class Clock(Protocol):
     def today(self) -> date:
         """Data corrente, no fuso local de quem usa o sistema."""

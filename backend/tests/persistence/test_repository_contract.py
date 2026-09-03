@@ -490,22 +490,6 @@ def test_the_composition_is_per_sprint_and_carla_is_not_a_conflict(
     assert len(repos.memberships.list_all(squad_id=boreal.id)) == 2
 
 
-def test_membership_existence_is_asked_by_the_full_triple(
-    world: World, repos: Repositories
-) -> None:
-    world.sprints(18, 19)
-    squad = world.squad("Alfa")
-    member = world.member("Ana")
-    world.join(squad, member, 18)
-
-    assert repos.memberships.exists(
-        squad_id=squad.id, member_id=member.id, sprint_id=world.sprint(18).id
-    )
-    assert not repos.memberships.exists(
-        squad_id=squad.id, member_id=member.id, sprint_id=world.sprint(19).id
-    )
-
-
 def test_deleting_memberships_returns_how_many_rows_left(
     world: World, repos: Repositories
 ) -> None:
@@ -584,16 +568,8 @@ def test_the_sprint_window_is_closed_on_both_ends(
     assert repos.sprints.list_all(number_from=30) == []
 
 
-def test_the_last_sprint_is_the_one_with_the_highest_number(
-    world: World, repos: Repositories
-) -> None:
-    """RN10: `create_next_sprint` parte dela."""
-    assert repos.sprints.last() is None
-
+def test_a_sprint_is_found_by_its_number(world: World, repos: Repositories) -> None:
     world.sprints(18, 20)
-    last = repos.sprints.last()
-    assert last is not None
-    assert last.number == 20
     assert repos.sprints.get_by_number(19) == world.sprint(19)
     assert repos.sprints.get_by_number(99) is None
     assert repos.sprints.get(uid(999)) is None

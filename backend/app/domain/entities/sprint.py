@@ -45,20 +45,13 @@ class Sprint:
             end_date=end_date,
         )
 
-    @property
-    def duration_days(self) -> int:
-        """Dias de calendário entre início e fim. O padrão é 11 (§6.6).
-
-        Dias **úteis** variam por feriado e o sistema não os modela.
-        """
-        return (self.end_date - self.start_date).days
-
-    def contains(self, day: date) -> bool:
-        return self.start_date <= day <= self.end_date
-
-    def overlaps(self, other: Sprint) -> bool:
-        return self.start_date <= other.end_date and other.start_date <= self.end_date
-
     def intersects(self, start: date, end: date) -> bool:
-        """Intersecta a janela `[start, end]` — usado pela grade (RN13)."""
+        """Intersecta a janela `[start, end]` — usado pela grade (RN13).
+
+        É o único predicado de calendário que a entidade tem. `contains`,
+        `overlaps` e `duration_days` existiram aqui e saíram por não ter
+        chamador nenhum fora dos próprios testes: a sobreposição real é
+        `validate_sprint_sequence`, que compara `start`/`end` direto, e um dia
+        dentro da sprint é `intersects(dia, dia)`.
+        """
         return self.start_date <= end and start <= self.end_date

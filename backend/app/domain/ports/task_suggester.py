@@ -9,7 +9,7 @@ prompt escrito. Nada aqui é chamado por nenhum use case.
 """
 
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 from uuid import UUID
 
 from app.domain.services.planning_rules import InitiativeRef
@@ -30,7 +30,6 @@ class SuggestedTask:
     notes: str = ""
 
 
-@runtime_checkable
 class TaskSuggester(Protocol):
     def suggest(
         self, transcript: str, context: PlanningContext

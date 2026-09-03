@@ -192,14 +192,6 @@ class FakeSquadMembershipRepository:
         for membership in memberships:
             self.rows[membership.id] = membership
 
-    def exists(self, *, squad_id: UUID, member_id: UUID, sprint_id: UUID) -> bool:
-        return any(
-            row.squad_id == squad_id
-            and row.member_id == member_id
-            and row.sprint_id == sprint_id
-            for row in self.rows.values()
-        )
-
     def list_all(
         self,
         *,
@@ -263,13 +255,6 @@ class FakeSprintRepository:
                 and (number_to is None or sprint.number <= number_to)
             ),
             key=lambda sprint: sprint.number,
-        )
-
-    def last(self) -> Sprint | None:
-        return max(
-            (deepcopy(sprint) for sprint in self.rows.values()),
-            key=lambda sprint: sprint.number,
-            default=None,
         )
 
 

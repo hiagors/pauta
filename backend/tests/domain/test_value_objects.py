@@ -46,7 +46,9 @@ class TestSprintRange:
     def test_intervalo_e_inclusivo_nas_duas_pontas(self) -> None:
         interval = SprintRange(18, 22)
         assert interval.numbers == (18, 19, 20, 21, 22)
-        assert len(interval) == 5
+        assert list(interval) == [18, 19, 20, 21, 22]
+        # `in` continua funcionando pelo `__iter__`: o `__contains__` explícito
+        # que existia aqui dizia a mesma coisa e não tinha chamador nenhum.
         assert 18 in interval
         assert 23 not in interval
 

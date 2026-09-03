@@ -45,10 +45,3 @@ class SqlAlchemySprintRepository:
         if number_to is not None:
             statement = statement.where(SprintModel.number <= number_to)
         return [sprint_to_entity(model) for model in self.session.scalars(statement)]
-
-    def last(self) -> Sprint | None:
-        """A de maior número, que é a base de `create_next_sprint` (RN10)."""
-        model = self.session.scalars(
-            select(SprintModel).order_by(SprintModel.number.desc()).limit(1)
-        ).first()
-        return None if model is None else sprint_to_entity(model)

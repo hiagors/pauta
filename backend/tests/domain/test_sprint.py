@@ -13,7 +13,7 @@ def test_o_padrao_do_dado_real_tem_onze_dias() -> None:
     sprint = Sprint.create(
         number=18, start_date=date(2026, 8, 31), end_date=date(2026, 9, 11)
     )
-    assert sprint.duration_days == 11
+    assert (sprint.end_date - sprint.start_date).days == 11
     assert sprint.start_date.weekday() == 0
     assert sprint.end_date.weekday() == 4
 
@@ -30,30 +30,6 @@ def test_numero_precisa_ser_positivo() -> None:
         Sprint.create(
             number=0, start_date=date(2026, 8, 31), end_date=date(2026, 9, 11)
         )
-
-
-def test_contains() -> None:
-    sprint = Sprint.create(
-        number=18, start_date=date(2026, 8, 31), end_date=date(2026, 9, 11)
-    )
-    assert sprint.contains(date(2026, 8, 31))
-    assert sprint.contains(date(2026, 9, 11))
-    assert not sprint.contains(date(2026, 9, 12))
-
-
-def test_overlaps() -> None:
-    a = Sprint.create(
-        number=18, start_date=date(2026, 8, 31), end_date=date(2026, 9, 11)
-    )
-    b = Sprint.create(
-        number=19, start_date=date(2026, 9, 14), end_date=date(2026, 9, 25)
-    )
-    c = Sprint.create(
-        number=20, start_date=date(2026, 9, 7), end_date=date(2026, 9, 18)
-    )
-    assert not a.overlaps(b)
-    assert a.overlaps(c)
-    assert c.overlaps(a)
 
 
 def test_intersects_a_janela_da_grade() -> None:

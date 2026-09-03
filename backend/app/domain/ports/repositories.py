@@ -19,7 +19,7 @@ dentro do corpo da classe sombreia o builtin `list` e quebra as anotações
 """
 
 from collections.abc import Collection, Sequence
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 from uuid import UUID
 
 from app.domain.entities.allocation import Allocation
@@ -34,7 +34,6 @@ from app.domain.value_objects.initiative_status import InitiativeStatus
 from app.domain.value_objects.priority import Priority
 
 
-@runtime_checkable
 class ProjectRepository(Protocol):
     def add(self, project: Project) -> None: ...
 
@@ -53,7 +52,6 @@ class ProjectRepository(Protocol):
     def delete(self, project_id: UUID) -> None: ...
 
 
-@runtime_checkable
 class InitiativeRepository(Protocol):
     def add(self, initiative: Initiative) -> None: ...
 
@@ -80,7 +78,6 @@ class InitiativeRepository(Protocol):
     def delete(self, initiative_id: UUID) -> None: ...
 
 
-@runtime_checkable
 class MemberRepository(Protocol):
     def add(self, member: Member) -> None: ...
 
@@ -93,7 +90,6 @@ class MemberRepository(Protocol):
     def list_by_ids(self, ids: Collection[UUID]) -> list[Member]: ...
 
 
-@runtime_checkable
 class SquadRepository(Protocol):
     def add(self, squad: Squad) -> None: ...
 
@@ -108,11 +104,8 @@ class SquadRepository(Protocol):
     def list_by_ids(self, ids: Collection[UUID]) -> list[Squad]: ...
 
 
-@runtime_checkable
 class SquadMembershipRepository(Protocol):
     def add_many(self, memberships: Sequence[SquadMembership]) -> None: ...
-
-    def exists(self, *, squad_id: UUID, member_id: UUID, sprint_id: UUID) -> bool: ...
 
     def list_all(
         self,
@@ -131,7 +124,6 @@ class SquadMembershipRepository(Protocol):
     ) -> int: ...
 
 
-@runtime_checkable
 class SprintRepository(Protocol):
     def add(self, sprint: Sprint) -> None: ...
 
@@ -145,10 +137,7 @@ class SprintRepository(Protocol):
         """Ordenado por `number` crescente."""
         ...
 
-    def last(self) -> Sprint | None: ...
 
-
-@runtime_checkable
 class AllocationRepository(Protocol):
     def add_many(self, allocations: Sequence[Allocation]) -> None: ...
 
@@ -170,7 +159,6 @@ class AllocationRepository(Protocol):
     def delete_many(self, ids: Collection[UUID]) -> int: ...
 
 
-@runtime_checkable
 class MutedAlertRepository(Protocol):
     def add(self, mute: MutedAlert) -> None: ...
 

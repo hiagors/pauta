@@ -21,7 +21,7 @@ operações sobre o banco **inteiro**, não sobre um agregado:
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 
 from app.domain.entities.allocation import Allocation
 from app.domain.entities.initiative import Initiative
@@ -52,21 +52,18 @@ class SnapshotBundle:
     muted_alerts: tuple[MutedAlert, ...] = ()
 
 
-@runtime_checkable
 class SnapshotWriter(Protocol):
     def write(self, bundle: SnapshotBundle) -> tuple[Path, ...]:
         """Escreve o snapshot e devolve os caminhos gerados."""
         ...
 
 
-@runtime_checkable
 class SnapshotReader(Protocol):
     def read(self, path: Path) -> SnapshotBundle:
         """Lê um snapshot de um diretório."""
         ...
 
 
-@runtime_checkable
 class SnapshotStore(Protocol):
     """O banco inteiro, de uma vez: é o que export e import precisam."""
 

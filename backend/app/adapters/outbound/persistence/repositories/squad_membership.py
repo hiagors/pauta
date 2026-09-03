@@ -38,20 +38,6 @@ class SqlAlchemySquadMembershipRepository:
         )
         self.session.flush()
 
-    def exists(self, *, squad_id: UUID, member_id: UUID, sprint_id: UUID) -> bool:
-        return (
-            self.session.scalars(
-                select(SquadMembershipModel.id)
-                .where(
-                    SquadMembershipModel.squad_id == squad_id,
-                    SquadMembershipModel.member_id == member_id,
-                    SquadMembershipModel.sprint_id == sprint_id,
-                )
-                .limit(1)
-            ).first()
-            is not None
-        )
-
     def list_all(
         self,
         *,

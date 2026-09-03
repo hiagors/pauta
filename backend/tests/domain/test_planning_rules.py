@@ -112,7 +112,7 @@ class TestSprintAtual:
         atual = rules.current_sprint(sprints, date(2026, 9, 16))
         assert atual is not None
         assert atual.number == 18
-        assert not atual.contains(date(2026, 9, 16))
+        assert atual.end_date < date(2026, 9, 16)
 
     def test_sem_sprint_iniciada_nao_ha_sprint_atual(self) -> None:
         sprints = sprint_18_to_22()
