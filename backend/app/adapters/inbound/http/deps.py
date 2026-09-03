@@ -64,6 +64,7 @@ from app.adapters.outbound.snapshot.debounce import (
 from app.adapters.outbound.snapshot.reader import DirectorySnapshotReader
 from app.adapters.outbound.snapshot.writer import DirectorySnapshotWriter
 from app.adapters.outbound.system_clock import SystemClock
+from app.application.ports.snapshot import SnapshotReader, SnapshotWriter
 from app.application.use_cases.snapshots.export import ExportSnapshot
 from app.config.settings import Settings
 from app.domain.ports.clock import Clock
@@ -77,7 +78,7 @@ from app.domain.ports.repositories import (
     SquadMembershipRepository,
     SquadRepository,
 )
-from app.domain.ports.snapshot import SnapshotReader, SnapshotStore, SnapshotWriter
+from app.domain.ports.snapshot import SnapshotStore
 
 #: Os métodos que mudam dado. O `GET` não agenda export (RNF3).
 MUTATING_METHODS: Final = frozenset({"POST", "PUT", "PATCH", "DELETE"})

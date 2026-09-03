@@ -349,10 +349,12 @@ pauta/
 │   │   │   ├── errors.py               # DomainError e subclasses
 │   │   │   └── ports/
 │   │   │       ├── repositories.py     # Protocol: ProjectRepository, ...
-│   │   │       ├── snapshot.py         # Protocol: SnapshotWriter, SnapshotReader
+│   │   │       ├── snapshot.py         # SnapshotBundle + Protocol: SnapshotStore
 │   │   │       ├── clock.py            # Protocol: Clock — para is_current testável
 │   │   │       └── task_suggester.py   # v2 — porta declarada, sem implementação
 │   │   ├── application/
+│   │   │   ├── ports/
+│   │   │   │   └── snapshot.py         # Protocol: SnapshotWriter, SnapshotReader
 │   │   │   ├── dto/                    # dataclasses de entrada/saída dos use cases
 │   │   │   └── use_cases/
 │   │   │       ├── projects/            create, update, list, get, archive
@@ -429,6 +431,13 @@ pauta/
 - Entidades de domínio são `@dataclass` com invariantes validadas no `__post_init__`
   ou em construtores nomeados (`Initiative.create(...)`).
 - Repositórios são `typing.Protocol` declarados no domínio e implementados no adapter.
+- **Porta que fala de arquivo, rede ou processo não é do domínio.** "Só stdlib" é
+  literal demais para pegar isso: `pathlib` é stdlib, e `SnapshotWriter` chegou a
+  morar em `domain/ports/` devolvendo `tuple[Path, ...]` com a varredura de import
+  passando. O que entrou ali não foi uma biblioteca, foi o conceito "sistema de
+  arquivos" — e ele vazou para o DTO da aplicação e daí para o schema HTTP.
+  `SnapshotWriter` e `SnapshotReader` moram em `application/ports/`; `SnapshotStore`,
+  que fala do banco inteiro em entidades, continua no domínio.
 - Nenhum use case recebe `Session`, `Request` ou modelo SQLAlchemy. Só portas e DTOs.
 - Nada no domínio chama `date.today()`. A data corrente entra pela porta `Clock`, ou
   o `is_current` fica intestável.

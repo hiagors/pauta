@@ -28,8 +28,9 @@ from app.application.dto.snapshots import (
     ImportSnapshotResultView,
     SnapshotCountsView,
 )
+from app.application.ports.snapshot import SnapshotReader
 from app.domain.errors import InvalidSnapshot
-from app.domain.ports.snapshot import SnapshotBundle, SnapshotReader, SnapshotStore
+from app.domain.ports.snapshot import SnapshotBundle, SnapshotStore
 
 
 @dataclass(frozen=True)

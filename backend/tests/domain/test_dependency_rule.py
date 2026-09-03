@@ -14,6 +14,19 @@ BACKEND = Path(__file__).resolve().parents[2]
 DOMAIN = BACKEND / "app" / "domain"
 APPLICATION = BACKEND / "app" / "application"
 
+#: stdlib que o domínio não pode importar **mesmo sendo stdlib**.
+#:
+#: A regra do §5 é "só stdlib", e ela é literal demais para pegar isto: por
+#: anos `domain/ports/snapshot.py` declarou `SnapshotWriter.write(...) ->
+#: tuple[Path, ...]` e a varredura passava, porque `pathlib` é stdlib. O que
+#: tinha entrado no domínio não era uma biblioteca — era o **conceito**
+#: "sistema de arquivos", e ele vazava dali para o DTO da aplicação e daí para
+#: o schema HTTP. As duas portas foram para `application/ports/`, e esta lista
+#: existe para elas não voltarem.
+FILESYSTEM_IN_DOMAIN = frozenset(
+    {"pathlib", "os", "shutil", "tempfile", "io", "socket", "subprocess"}
+)
+
 #: As quatro que o CLAUDE.md nomeia, mais as que viriam pelo mesmo caminho.
 FORBIDDEN_IN_DOMAIN = frozenset(
     {
@@ -90,6 +103,24 @@ def test_domain_never_imports_the_forbidden_libraries() -> None:
                 )
     assert not violations, (
         "dependência de adapter dentro do domínio:\n  " + "\n  ".join(violations)
+    )
+
+
+def test_the_domain_does_not_know_what_a_file_is() -> None:
+    """ "Só stdlib" não basta: `pathlib` é stdlib e é sistema de arquivos.
+
+    Exportar o plano para uma pasta é caso de uso (§9), e as portas que falam
+    de `Path` moram em `application/ports/snapshot.py`.
+    """
+    violations: list[str] = []
+    for path in _python_files(DOMAIN):
+        for lineno, module in _imported_modules(path):
+            if _top_level(module) in FILESYSTEM_IN_DOMAIN:
+                violations.append(
+                    f"{path.relative_to(BACKEND)}:{lineno} importa {module!r}"
+                )
+    assert not violations, "o domínio não tem sistema de arquivos:\n  " + "\n  ".join(
+        violations
     )
 
 

@@ -12,7 +12,8 @@ adapter, e nem o domínio nem o use case sabem dele.
 from dataclasses import dataclass
 
 from app.application.dto.snapshots import ExportSnapshotResultView, SnapshotCountsView
-from app.domain.ports.snapshot import SnapshotStore, SnapshotWriter
+from app.application.ports.snapshot import SnapshotWriter
+from app.domain.ports.snapshot import SnapshotStore
 
 
 @dataclass(frozen=True)

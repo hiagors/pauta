@@ -4,11 +4,12 @@ O banco é a fonte da verdade; JSON e Markdown são **saída** (D5). A
 reimportação é restauração, não integração — não existe importação de planilha
 nem de CSV (RNF5).
 
-O writer devolve os caminhos que gerou. Que formato ele escreve, em que ordem de
-chaves e com qual debounce é detalhe de adapter: o domínio não sabe.
+Aqui mora só o lado do **banco**. `SnapshotWriter` e `SnapshotReader` — que
+falam de arquivo, e portanto de `pathlib.Path` — moram em
+`application/ports/snapshot.py`, com o motivo escrito lá.
 
-`SnapshotStore` é a terceira porta, e existe porque export e import são
-operações sobre o banco **inteiro**, não sobre um agregado:
+`SnapshotStore` existe porque export e import são operações sobre o banco
+**inteiro**, não sobre um agregado:
 
 - o export precisa ler tudo, e ler oito repositórios para montar um objeto que
   já tem nome (`SnapshotBundle`) seria o mesmo trabalho espalhado;
@@ -20,7 +21,6 @@ operações sobre o banco **inteiro**, não sobre um agregado:
 """
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Protocol
 
 from app.domain.entities.allocation import Allocation
@@ -50,18 +50,6 @@ class SnapshotBundle:
     sprints: tuple[Sprint, ...] = ()
     allocations: tuple[Allocation, ...] = ()
     muted_alerts: tuple[MutedAlert, ...] = ()
-
-
-class SnapshotWriter(Protocol):
-    def write(self, bundle: SnapshotBundle) -> tuple[Path, ...]:
-        """Escreve o snapshot e devolve os caminhos gerados."""
-        ...
-
-
-class SnapshotReader(Protocol):
-    def read(self, path: Path) -> SnapshotBundle:
-        """Lê um snapshot de um diretório."""
-        ...
 
 
 class SnapshotStore(Protocol):
