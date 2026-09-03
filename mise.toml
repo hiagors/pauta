@@ -13,12 +13,34 @@ _.python.venv = { path = "{{config_root}}/backend/.venv", create = false }
 # Faz o uv usar o Python que o mise instalou, em vez de baixar outro.
 UV_PYTHON_PREFERENCE = "only-system"
 
-DATABASE_URL = "sqlite+pysqlite:///{{config_root}}/data/pauta.sqlite"
-SNAPSHOT_DIR = "{{config_root}}/snapshots"
+# O dado do usuário mora **fora** do repositório, em `~/pauta`. Duas razões: um
+# `git clean -xdf` não apaga o banco de ninguém, e este arquivo é commitado —
+# com um caminho absoluto ele carregaria a máquina de quem o escreveu, e com
+# `{{config_root}}` o dado voltaria para dentro do repositório.
+#
+# `get_env` em vez de um literal para que a variável já presente no ambiente
+# vença: sem isso o `[env]` do mise sobrescreve o que veio de fora, e não
+# haveria como apontar outro lugar sem editar (e sujar) o repositório.
+PAUTA_HOME = "{{ get_env(name='PAUTA_HOME', default=env.HOME ~ '/pauta') }}"
+
+# Quatro barras: três do esquema `sqlite+pysqlite://` e uma do caminho
+# absoluto. Com três, o SQLAlchemy leria `Users` como host.
+DATABASE_URL = "sqlite+pysqlite:///{{env.PAUTA_HOME}}/data/pauta.sqlite"
+
+# Sobrescritível à parte do `PAUTA_HOME` de propósito: é esta pasta que vai
+# para o Drive, e o banco não pode ir com ela (RNF1 — SQLite em pasta
+# sincronizada corrompe). Apontar `SNAPSHOT_DIR` para a pasta da nuvem é o
+# caminho certo; sincronizar o `PAUTA_HOME` inteiro levaria o `data/` junto.
+SNAPSHOT_DIR = "{{ get_env(name='SNAPSHOT_DIR', default=env.PAUTA_HOME ~ '/snapshots') }}"
+
 PUBLIC_API_URL = "http://127.0.0.1:8000"
 
 [tasks."setup:dirs"]
-run = "mkdir -p {{config_root}}/data {{config_root}}/snapshots"
+description = "Cria a pasta de dados do usuário, fora do repositório"
+# O SQLite não cria a pasta do arquivo, então `data/` tem que existir antes da
+# primeira migration. A do snapshot o writer cria sozinho (`mkdir -p`); entra
+# aqui só para o usuário a ver pronta no fim do `setup`.
+run = "mkdir -p $PAUTA_HOME/data $SNAPSHOT_DIR"
 
 [tasks."setup:py"]
 dir = "{{config_root}}/backend"

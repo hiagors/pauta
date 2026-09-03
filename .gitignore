@@ -1,7 +1,12 @@
 # runtime e dados
-# As duas primeiras são ancoradas na raiz de propósito: sem a barra inicial o
-# padrão casa com qualquer pasta de qualquer nível, e `snapshots/` chegou a
-# esconder do Git o pacote `application/use_cases/snapshots/`.
+# `/data/` e `/snapshots/` são ancorados na raiz de propósito: sem a barra
+# inicial o padrão casa com qualquer pasta de qualquer nível, e `snapshots/`
+# chegou a esconder do Git o pacote `application/use_cases/snapshots/`.
+#
+# Banco e snapshot moram em `$PAUTA_HOME` (`~/pauta`), fora do repositório, e
+# em uso normal nenhuma das duas pastas nasce aqui. Os padrões ficam como rede
+# de segurança: um `PAUTA_HOME` apontado para dentro do repo não vaza dado real
+# para o Git.
 /data/
 *.sqlite
 *.sqlite-journal
@@ -18,5 +23,5 @@ dist/
 CLAUDE.local.md
 .claude/settings.local.json
 
-# pasta sincronizada (Drive) — saída, não fonte
+# saída do snapshot, se algum override a trouxer para dentro do repositório
 /snapshots/

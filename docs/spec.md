@@ -195,12 +195,15 @@ _.python.venv = { path = "{{config_root}}/backend/.venv", create = false }
 # Faz o uv usar o Python que o mise instalou, em vez de baixar outro.
 UV_PYTHON_PREFERENCE = "only-system"
 
-DATABASE_URL = "sqlite+pysqlite:///{{config_root}}/data/pauta.sqlite"
-SNAPSHOT_DIR = "{{config_root}}/snapshots"
+# O dado do usuário mora fora do repositório. `get_env` para que a variável já
+# presente no ambiente vença o `[env]` do mise.
+PAUTA_HOME = "{{ get_env(name='PAUTA_HOME', default=env.HOME ~ '/pauta') }}"
+DATABASE_URL = "sqlite+pysqlite:///{{env.PAUTA_HOME}}/data/pauta.sqlite"
+SNAPSHOT_DIR = "{{ get_env(name='SNAPSHOT_DIR', default=env.PAUTA_HOME ~ '/snapshots') }}"
 PUBLIC_API_URL = "http://127.0.0.1:8000"
 
 [tasks."setup:dirs"]
-run = "mkdir -p {{config_root}}/data {{config_root}}/snapshots"
+run = "mkdir -p $PAUTA_HOME/data $SNAPSHOT_DIR"
 
 [tasks."setup:py"]
 dir = "{{config_root}}/backend"
@@ -956,8 +959,12 @@ não se mistura com backlog.
 
 ## 9. Persistência e snapshot
 
-- **RNF1.** SQLite, arquivo único, caminho por env (`DATABASE_URL`), em `data/`, fora
-  da pasta sincronizada. Ligar `PRAGMA foreign_keys=ON` em cada conexão.
+- **RNF1.** SQLite, arquivo único, caminho por env (`DATABASE_URL`), em
+  `$PAUTA_HOME/data/`, fora da pasta sincronizada. `PAUTA_HOME` é `~/pauta` por
+  default: o dado do usuário fica fora do repositório, para que um `git clean` não o
+  apague e para que o `mise.toml`, que é commitado, não carregue o caminho de uma
+  máquina. `SNAPSHOT_DIR` é sobrescritível à parte justamente para ir à nuvem sem
+  levar o banco. Ligar `PRAGMA foreign_keys=ON` em cada conexão.
 - **RNF2.** Migrations com Alembic desde a primeira tabela. Sem `create_all` no
   caminho de produção. Nos testes de HTTP, o schema em memória é criado rodando as
   migrations do Alembic contra a conexão in-memory — não `metadata.create_all()` —

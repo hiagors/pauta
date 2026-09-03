@@ -132,7 +132,9 @@ final: `import` é palavra reservada e `from ... import import` não existe.
 
 No `.gitignore`, `/data/` e `/snapshots/` são ancorados na raiz. Sem a barra
 inicial o padrão casa com qualquer nível, e `snapshots/` escondia do Git o
-pacote `application/use_cases/snapshots/`.
+pacote `application/use_cases/snapshots/`. Em uso normal nenhuma das duas nasce
+no repositório — o dado mora em `$PAUTA_HOME` —, e os padrões seguem ali como
+rede de segurança para um override apontado para dentro do repo.
 
 ## Front (Fase 6)
 
@@ -164,7 +166,15 @@ data simples como UTC e, em UTC-3, 31/08 volta como 30/08.
 `mise exec` **sobrescreve** as variáveis do `[env]` do `mise.toml`. Para rodar a
 API contra um banco descartável, chame `backend/.venv/bin/uvicorn` direto com
 `DATABASE_URL` e `SNAPSHOT_DIR` no comando — com `mise exec` o dado de teste vai
-parar em `data/pauta.sqlite` e em `snapshots/`.
+parar no banco e na pasta de snapshot de verdade do usuário.
+
+O dado do usuário mora fora do repositório: `$PAUTA_HOME`, `~/pauta` por
+default, com `data/` e `snapshots/` dentro. `PAUTA_HOME` e `SNAPSHOT_DIR` usam
+`get_env` no `mise.toml` para que o valor já presente no ambiente **vença** o
+`[env]` — sem isso o mise sobrescreveria o que veio de fora e a única forma de
+apontar outro lugar seria editar um arquivo versionado. As duas são separadas
+porque só a do snapshot pode ir para o Drive: SQLite em pasta sincronizada
+corrompe (RNF1).
 
 ## Planejamento (Fase 7)
 

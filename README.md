@@ -2,7 +2,7 @@
 
 Planejamento de sprints do time, rodando local. Sem autenticação e sem rede
 externa: uma API FastAPI em `:8000`, um front Astro em `:4321` e um SQLite em
-arquivo único dentro de `data/`.
+arquivo único dentro de `~/pauta/data/`.
 
 A especificação está em [`docs/spec.md`](docs/spec.md); a mesma coisa em
 linguagem de negócio, em [`docs/requisitos-v1.md`](docs/requisitos-v1.md).
@@ -15,11 +15,33 @@ Node, uv e pnpm nas versões pinadas em `mise.toml`.
 ```sh
 mise trust       # autoriza o mise.toml deste diretório
 mise install     # instala os runtimes
-mise run setup   # cria data/ e snapshots/, instala dependências, aplica migrations
+mise run setup   # cria ~/pauta, instala dependências, aplica migrations
 ```
 
 Na primeira entrada no diretório o mise avisa que `backend/.venv` não existe.
 É esperado: o venv é do `uv` e nasce no `mise run setup`.
+
+### Onde o dado mora
+
+O banco e o snapshot ficam **fora** do repositório, em `~/pauta`:
+
+```
+~/pauta/data/pauta.sqlite   o banco — a fonte da verdade
+~/pauta/snapshots/          a saída em JSON e Markdown
+```
+
+É por isso que `git clean` não apaga o seu planejamento, e que o `mise.toml`
+não precisa carregar o caminho da máquina de ninguém. Para mudar de lugar,
+exporte a variável antes — não edite o `mise.toml`, que é versionado:
+
+```sh
+export PAUTA_HOME=/outro/lugar             # move banco e snapshot juntos
+export SNAPSHOT_DIR=~/Library/CloudStorage/GoogleDrive-voce/pauta
+```
+
+`SNAPSHOT_DIR` é separada de propósito: é ela que vai para o Drive, e o banco
+**não** pode ir junto — SQLite em pasta sincronizada corrompe (RNF1). Aponte a
+pasta do snapshot para a nuvem, nunca o `PAUTA_HOME` inteiro.
 
 ## Rodar
 
@@ -125,7 +147,7 @@ aberto.
 
 ## Snapshot
 
-O banco é a fonte da verdade; `snapshots/` é saída, e é a pasta que fica no
+O banco é a fonte da verdade; `$SNAPSHOT_DIR` é saída, e é a pasta que fica no
 Drive. A cada alteração bem-sucedida pela API o snapshot é reexportado
 sozinho, cinco segundos depois da última alteração da sequência — editar dez
 coisas seguidas gera **um** export, não dez.
@@ -146,7 +168,7 @@ Para restaurar em outra máquina, ou depois de perder o banco:
 ```sh
 cd backend
 uv run alembic upgrade head                                    # banco vazio
-uv run python -m app.adapters.inbound.cli snapshot import ../snapshots
+uv run python -m app.adapters.inbound.cli snapshot import "$SNAPSHOT_DIR"
 ```
 
 **A importação apaga tudo e recria** a partir da pasta — é restauração, não
@@ -159,10 +181,10 @@ caminhos existem na API, em `POST /api/v1/snapshots/export` e
 ```
 backend/    API FastAPI em arquitetura hexagonal (domain, application, adapters)
 frontend/   Astro com ilhas React e Tailwind
-data/       banco SQLite — ignorado pelo Git
-snapshots/  saída em JSON e Markdown — ignorada pelo Git
 docs/       especificação e requisitos
 ```
+
+O banco e o snapshot não aparecem aí: moram em `~/pauta`, fora do repositório.
 
 `backend/uv.lock` e `frontend/pnpm-lock.yaml` são versionados: são eles que
 travam na prática as versões da seção 4.1 do spec.
