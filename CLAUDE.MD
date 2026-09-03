@@ -179,6 +179,15 @@ tela (achado `C3`). `BACKLOG` fica fora — o caminho dela é o botão "Alocar" 
 backlog — e `DONE`/`CANCELLED` também, por RN7. Com filtro de squad ou de
 pessoa, as linhas vazias somem.
 
+A exceção é `BACKLOG` de projeto com `is_capacity_reserve`, que **vira** linha
+(`_RESERVE_ROWLESS_STATUSES` em `get_grid.py`). Manter `BACKLOG` fora serve para
+não duplicar o `/backlog`, e o `/backlog` exclui reserva por regra — então
+nenhuma tela ofereceria a primeira alocação. E como só a alocação tira do
+`BACKLOG` (RN2) e não existe transição manual para `PLANNED`, a iniciativa que
+nasce com o projeto de reserva (RN-I1) ficava sem porta de entrada nenhuma.
+`DONE` e `CANCELLED` seguem fora também na reserva: a exceção é do status, não
+do projeto.
+
 Não existe endpoint de mover alocação (§8). "Mover" e "Estender até" são
 `POST /allocations` no intervalo novo e `DELETE /allocations` na sobra —
 `rangeLeftovers` calcula a sobra, em até dois pedaços. A ordem é obrigatória:

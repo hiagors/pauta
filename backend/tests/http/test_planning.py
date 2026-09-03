@@ -126,6 +126,49 @@ def test_the_grid_filters_narrow_the_rows(api: Api) -> None:
     assert [group["project"]["name"] for group in grid["groups"]] == ["Aurora"]
 
 
+def test_a_capacity_reserve_project_reaches_the_grid_from_the_backlog(
+    api: Api,
+) -> None:
+    """A grade é a única porta de entrada da reserva (§8).
+
+    O `/backlog` exclui essas iniciativas por regra, e só a alocação tira do
+    `BACKLOG` (RN2). Do cadastro do projeto até a primeira barra, sem passar
+    por nenhuma outra tela.
+    """
+    api.sprints()
+    reserve = api.project("Plantão", is_capacity_reserve=True)
+    initiative = reserve["initiatives"][0]
+    assert initiative["status"] == "BACKLOG"
+    assert api.get("/planning/backlog").json()["items"] == []
+
+    grid = api.get("/planning/grid", params={"sprint_from": 18, "sprint_to": 18}).json()
+
+    (group,) = grid["groups"]
+    assert group["project"]["is_capacity_reserve"] is True
+    (row,) = group["rows"]
+    assert row["initiative"]["status"] == "BACKLOG"
+    assert row["bars"] == []
+
+    squad = api.squad("Alfa")
+    api.allocate(initiative["id"], 18, 18, squad_id=squad["id"])
+
+    grid = api.get("/planning/grid", params={"sprint_from": 18, "sprint_to": 18}).json()
+
+    (row,) = grid["groups"][0]["rows"]
+    assert row["initiative"]["status"] == "PLANNED"
+    assert len(row["bars"]) == 1
+
+
+def test_the_grid_keeps_a_plain_backlog_initiative_out(api: Api) -> None:
+    """A exceção é da reserva: em projeto normal o caminho é o `/backlog`."""
+    api.sprints()
+    api.project("Aurora")
+
+    grid = api.get("/planning/grid", params={"sprint_from": 18, "sprint_to": 18}).json()
+
+    assert grid["groups"] == []
+
+
 def test_the_backlog_summarizes_what_is_estimated(api: Api) -> None:
     """§8: `estimated_sprints_total` soma só quem tem estimativa."""
     project = api.project("Aurora")["project"]

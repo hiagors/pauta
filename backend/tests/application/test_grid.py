@@ -1,8 +1,10 @@
 """A grade do Gantt (§8, `planning/grid`; RN13)."""
 
 from app.application.dto.alerts import MuteAlertInput
+from app.application.dto.allocations import AllocateRangeInput
 from app.application.dto.planning import GridQuery
 from app.application.use_cases.alerts.mute_alert import MuteAlert
+from app.application.use_cases.planning.allocate_range import AllocateRange
 from app.application.use_cases.planning.get_grid import GetGrid
 from app.domain.services.fingerprint import alert_fingerprint
 from app.domain.value_objects.alert import AlertType
@@ -245,6 +247,74 @@ class TestRowsWithoutBars:
         world.initiative(world.project("Aurora"), "Catálogo V1")
 
         assert fakes.use_case(GetGrid).execute().groups == ()
+
+    def test_backlog_of_a_capacity_reserve_project_comes_in(
+        self, world: World, fakes: Fakes
+    ) -> None:
+        """A grade é a única porta de entrada da reserva.
+
+        O `/backlog` exclui iniciativa de projeto de reserva por regra, e só a
+        alocação tira do `BACKLOG` (RN2). Sem esta linha, a iniciativa que
+        nasce com o projeto (RN-I1) não teria onde receber a primeira.
+        """
+        world.sprints(18, 20)
+        world.initiative(world.project("Plantão", reserve=True), "Plantão")
+
+        (group,) = fakes.use_case(GetGrid).execute().groups
+        assert group.project.is_capacity_reserve
+        (row,) = group.rows
+        assert row.initiative.status is InitiativeStatus.BACKLOG
+        assert row.bars == ()
+
+    def test_allocating_from_the_reserve_row_closes_the_loop(
+        self, world: World, fakes: Fakes
+    ) -> None:
+        """O `+` da célula é o caminho inteiro: aloca, RN2 move para `PLANNED`
+        e a linha continua uma só, agora com barra."""
+        world.sprints(18, 20)
+        initiative = world.initiative(world.project("Plantão", reserve=True), "Plantão")
+        squad = world.squad("Alfa")
+
+        fakes.use_case(AllocateRange).execute(
+            AllocateRangeInput(
+                initiative_id=initiative.id,
+                squad_id=squad.id,
+                from_sprint_number=18,
+                to_sprint_number=18,
+            )
+        )
+
+        (group,) = fakes.use_case(GetGrid).execute().groups
+        (row,) = group.rows
+        assert row.initiative.status is InitiativeStatus.PLANNED
+        assert len(row.bars) == 1
+
+    def test_terminal_statuses_stay_out_of_a_reserve_project_too(
+        self, world: World, fakes: Fakes
+    ) -> None:
+        """A exceção é do `BACKLOG`, não da reserva: RN7 continua valendo."""
+        world.sprints(18, 20)
+        project = world.project("Plantão", reserve=True)
+        world.initiative(project, "Concluída", status=InitiativeStatus.DONE)
+        world.initiative(project, "Cancelada", status=InitiativeStatus.CANCELLED)
+
+        assert fakes.use_case(GetGrid).execute().groups == ()
+
+    def test_an_assignee_filter_suppresses_the_reserve_row_as_well(
+        self, world: World, fakes: Fakes
+    ) -> None:
+        """A linha vazia da reserva segue a mesma regra das outras."""
+        world.sprints(18, 20)
+        allocated = world.initiative(
+            world.project("Aurora"), "Catálogo V1", status=InitiativeStatus.PLANNED
+        )
+        world.initiative(world.project("Plantão", reserve=True), "Plantão")
+        squad = world.squad("Alfa")
+        world.allocate(allocated, 18, squad=squad)
+
+        view = fakes.use_case(GetGrid).execute(GridQuery(squad_id=squad.id))
+
+        assert [group.project.name for group in view.groups] == ["Aurora"]
 
     def test_terminal_statuses_stay_out(self, world: World, fakes: Fakes) -> None:
         """RN7: `DONE` e `CANCELLED` não aceitam alocação, então uma célula com

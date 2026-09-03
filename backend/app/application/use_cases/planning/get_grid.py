@@ -7,7 +7,9 @@ células.
 A grade não parte só das alocações: iniciativa viva sem barra na janela também
 vira linha, com `bars` vazio. É o que faz a célula vazia com o `+` do §10.3 ter
 onde existir, e o que impede uma iniciativa em andamento que perdeu todas as
-alocações de sumir da tela sem caminho de volta.
+alocações de sumir da tela sem caminho de volta. Em projeto de reserva de
+capacidade isso vale desde o `BACKLOG`, porque ali a grade é a única porta de
+entrada — ver `_RESERVE_ROWLESS_STATUSES`.
 """
 
 from collections import defaultdict
@@ -54,15 +56,23 @@ from app.domain.value_objects.initiative_status import InitiativeStatus
 
 #: Quem ganha linha na grade mesmo sem barra na janela.
 #:
-#: `BACKLOG` fica fora porque o caminho dela é o botão "Alocar" do backlog
-#: (§10.3), e mostrá-la aqui duplicaria a tela. `DONE` e `CANCELLED` ficam fora
-#: porque não aceitam nova alocação (RN7): a célula com `+` só saberia devolver
-#: 422.
+#: `DONE` e `CANCELLED` ficam fora porque não aceitam nova alocação (RN7): a
+#: célula com `+` só saberia devolver 422.
 _ROWLESS_STATUSES = (
     InitiativeStatus.PLANNED,
     InitiativeStatus.IN_PROGRESS,
     InitiativeStatus.DEPRIORITIZED,
 )
+
+#: `BACKLOG` fica fora **em projeto normal**, porque o caminho dela é o botão
+#: "Alocar" do backlog (§10.3) e mostrá-la aqui duplicaria a tela.
+#:
+#: Em projeto de reserva de capacidade não há essa duplicação a evitar: o
+#: `/backlog` exclui essas iniciativas por regra, então nenhuma tela ofereceria
+#: a primeira alocação. E como só a alocação tira do `BACKLOG` (RN2, e não há
+#: transição manual para `PLANNED`), sem esta linha a iniciativa que nasce com
+#: o projeto de reserva (RN-I1) fica sem porta de entrada nenhuma.
+_RESERVE_ROWLESS_STATUSES = (InitiativeStatus.BACKLOG,)
 
 
 @dataclass(frozen=True)
@@ -190,16 +200,45 @@ class GetGrid:
         receber linha vazia de iniciativa que ela não toca contradiz o filtro.
         O filtro de projeto, esse continua valendo — ele é sobre a iniciativa,
         não sobre quem a executa.
+
+        O status decide, com uma exceção: em projeto de reserva de capacidade,
+        `BACKLOG` também entra (`_RESERVE_ROWLESS_STATUSES`).
         """
         if criteria.squad_id is not None or criteria.member_id is not None:
             return []
+        candidates = self.initiatives.list_all(
+            project_id=criteria.project_id,
+            statuses=(*_ROWLESS_STATUSES, *_RESERVE_ROWLESS_STATUSES),
+        )
+        reserve = self._capacity_reserve_ids(candidates)
         return [
             initiative
-            for initiative in self.initiatives.list_all(
-                project_id=criteria.project_id, statuses=_ROWLESS_STATUSES
-            )
+            for initiative in candidates
             if initiative.id not in allocated
+            and (
+                initiative.status not in _RESERVE_ROWLESS_STATUSES
+                or initiative.project_id in reserve
+            )
         ]
+
+    def _capacity_reserve_ids(self, candidates: Sequence[Initiative]) -> set[UUID]:
+        """Dos projetos citados, quais são reserva de capacidade.
+
+        Consulta só os projetos das iniciativas cujo status depende da resposta
+        — sem nenhuma em `BACKLOG`, o conjunto de ids sai vazio e o repositório
+        não vai ao banco.
+        """
+        return {
+            project.id
+            for project in self.projects.list_by_ids(
+                {
+                    initiative.project_id
+                    for initiative in candidates
+                    if initiative.status in _RESERVE_ROWLESS_STATUSES
+                }
+            )
+            if project.is_capacity_reserve
+        }
 
     def _groups(
         self,

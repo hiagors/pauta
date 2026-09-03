@@ -922,6 +922,14 @@ Formato pensado para renderizar direto, sem o front recalcular nada:
   `/backlog` —, e `DONE` e `CANCELLED` também, porque não aceitam alocação (RN7).
   Com `squad_id` ou `member_id` no filtro, as linhas vazias somem: pedir a grade de um
   responsável e receber linha de iniciativa que ele não toca contradiz o filtro.
+- **Exceção do `BACKLOG`: projeto com `is_capacity_reserve`.** Aí a iniciativa em
+  `BACKLOG` **vira** linha vazia. A exclusão acima existe para não duplicar o
+  `/backlog`, e o `/backlog` exclui iniciativa de projeto de reserva por regra — não
+  há duplicação a evitar, e sem esta linha nenhuma tela ofereceria a primeira
+  alocação. Como só a alocação tira do `BACKLOG` (RN2) e não existe transição manual
+  para `PLANNED` (§6.3), a iniciativa que nasce com o projeto de reserva (RN-I1)
+  ficaria sem porta de entrada. `DONE` e `CANCELLED` continuam de fora, também na
+  reserva: a exceção é do `BACKLOG`, não do projeto.
 - `alerts_by_sprint` **não** é afetado pelos filtros de `squad_id` / `member_id` /
   `project_id`: o ícone no cabeçalho da coluna reporta a sprint inteira, senão filtrar
   esconderia justamente o conflito que se quer ver.
@@ -1132,7 +1140,8 @@ com o filtro persistido na URL.
 **`/backlog`.** Tabela das iniciativas com status `BACKLOG`. Contador no topo: quantas
 iniciativas e quantas sprints de trabalho elas somam (com aviso de quantas estão sem
 estimativa). Ordenação por prioridade, tamanho ou data de entrada. Botão "Alocar" em
-cada linha, abrindo o mesmo diálogo.
+cada linha, abrindo o mesmo diálogo. Iniciativa de projeto com `is_capacity_reserve`
+não aparece aqui, e por isso ela chega ao `+` da grade já em `BACKLOG` (§8).
 
 **`/projects`.** CRUD de projeto e de iniciativa. Painel lateral (drawer) para criar e
 editar, não página nova. O drawer de projeto lista as iniciativas dele e permite
