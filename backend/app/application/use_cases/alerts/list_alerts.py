@@ -8,7 +8,7 @@ Os silenciados saem da lista mas continuam contados: o painel mostra os
 não silenciados e guarda os outros atrás de um contador expansível (§7.3).
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from app.application.dto.alerts import AlertsQuery, AlertsView
 from app.application.planning_view import load_mutes, load_snapshot, load_window
@@ -23,7 +23,7 @@ from app.domain.ports.repositories import (
     SquadMembershipRepository,
     SquadRepository,
 )
-from app.domain.services.alert_service import AlertService
+from app.domain.services.alert_service import evaluate_alerts
 
 
 @dataclass(frozen=True)
@@ -37,7 +37,6 @@ class ListAlerts:
     memberships: SquadMembershipRepository
     muted_alerts: MutedAlertRepository
     clock: Clock
-    alert_service: AlertService = field(default_factory=AlertService)
 
     def execute(self, query: AlertsQuery | None = None) -> AlertsView:
         criteria = query or AlertsQuery()
@@ -55,7 +54,7 @@ class ListAlerts:
                 criteria.sprint_to if criteria.sprint_to is not None else max(numbers)
             ),
         )
-        alerts = self.alert_service.evaluate(
+        alerts = evaluate_alerts(
             load_snapshot(
                 window=window,
                 allocations=self.allocations,

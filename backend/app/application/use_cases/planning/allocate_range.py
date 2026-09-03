@@ -7,7 +7,7 @@ decisão célula por célula — criar, ignorar, reclamar ou reportar como falta
 """
 
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from uuid import UUID
 
 from app.application.dto.allocations import (
@@ -30,7 +30,7 @@ from app.domain.ports.repositories import (
     SquadMembershipRepository,
     SquadRepository,
 )
-from app.domain.services.alert_service import AlertService
+from app.domain.services.alert_service import evaluate_alerts
 from app.domain.services.planning_rules import plan_allocation
 from app.domain.value_objects.assignee import Assignee
 from app.domain.value_objects.initiative_status import InitiativeStatus
@@ -48,7 +48,6 @@ class AllocateRange:
     memberships: SquadMembershipRepository
     muted_alerts: MutedAlertRepository
     clock: Clock
-    alert_service: AlertService = field(default_factory=AlertService)
 
     def execute(self, data: AllocateRangeInput) -> AllocationResultView:
         """RN1, RN5, RN7 e RN8, nesta ordem.
@@ -117,9 +116,7 @@ class AllocateRange:
             ),
             missing_sprint_numbers=plan.missing_sprint_numbers,
             initiative_status=self._recalculate(initiative),
-            alerts=tuple(
-                self.alert_service.evaluate(snapshot, load_mutes(self.muted_alerts))
-            ),
+            alerts=tuple(evaluate_alerts(snapshot, load_mutes(self.muted_alerts))),
         )
 
     def _occupant_names(self, cells: Iterable[Allocation]) -> dict[UUID, str]:

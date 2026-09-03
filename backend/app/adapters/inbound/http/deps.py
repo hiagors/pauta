@@ -184,13 +184,15 @@ class Ports:
     def use_case[T](self, cls: type[T]) -> T:
         """Instancia o use case injetando as portas pelo nome do campo.
 
-        Campo que o feixe não tem — `alert_service`, que tem default — fica
-        com o default do próprio use case.
+        Sem `hasattr`: todo campo do use case tem que existir no feixe, e a
+        falta de um é `AttributeError` na hora, com o nome do campo na
+        mensagem. Enquanto o `AlertService` era injetável, um campo com default
+        podia sumir em silêncio — era a única peça do wiring que nenhum type
+        checker cobria, e a que o `Ports` tipado com os `Protocol` do domínio
+        agora fecha.
         """
         wanted = {item.name for item in fields(cls)}  # type: ignore[arg-type]
-        return cls(
-            **{name: getattr(self, name) for name in wanted if hasattr(self, name)}
-        )
+        return cls(**{name: getattr(self, name) for name in wanted})
 
 
 def provide_ports(

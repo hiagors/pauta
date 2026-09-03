@@ -14,7 +14,7 @@ entrada — ver `_RESERVE_ROWLESS_STATUSES`.
 
 from collections import defaultdict
 from collections.abc import Collection, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from uuid import UUID
 
 from app.application.dto.planning import (
@@ -48,7 +48,7 @@ from app.domain.ports.repositories import (
     SquadMembershipRepository,
     SquadRepository,
 )
-from app.domain.services.alert_service import AlertService
+from app.domain.services.alert_service import evaluate_alerts
 from app.domain.services.bar_consolidation import AllocationCell, consolidate_bars
 from app.domain.services.planning_rules import PlanningSnapshot
 from app.domain.value_objects.alert import AlertType
@@ -86,7 +86,6 @@ class GetGrid:
     memberships: SquadMembershipRepository
     muted_alerts: MutedAlertRepository
     clock: Clock
-    alert_service: AlertService = field(default_factory=AlertService)
 
     def execute(self, query: GridQuery | None = None) -> GridView:
         criteria = query or GridQuery()
@@ -340,7 +339,7 @@ class GetGrid:
         O ícone no cabeçalho da coluna é o resumo da sprint; se o silenciamento
         não o apagasse, silenciar não silenciaria nada (§7.3).
         """
-        alerts = self.alert_service.evaluate(snapshot, load_mutes(self.muted_alerts))
+        alerts = evaluate_alerts(snapshot, load_mutes(self.muted_alerts))
         grouped: dict[int, list[AlertType]] = defaultdict(list)
         for alert in alerts:
             if alert.is_muted:

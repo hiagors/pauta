@@ -171,7 +171,7 @@ def load_snapshot(
     squads: SquadRepository,
     memberships: SquadMembershipRepository,
 ) -> PlanningSnapshot:
-    """A fotografia do plano na janela, pronta para o `AlertService`.
+    """A fotografia do plano na janela, pronta para `evaluate_alerts`.
 
     `members` leva **apenas** os ativos: é a premissa A3 do §16 (quem é
     inativado só desaparece) implementada num lugar só, e é o que os dois

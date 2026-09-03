@@ -8,7 +8,7 @@ Perder todas as alocações **não** tira ninguém de `IN_PROGRESS`: quem começ
 não volta para o backlog (§6.3). Parar é `DEPRIORITIZED`, à mão.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from uuid import UUID
 
 from app.application.dto.allocations import (
@@ -35,7 +35,7 @@ from app.domain.ports.repositories import (
     SquadMembershipRepository,
     SquadRepository,
 )
-from app.domain.services.alert_service import AlertService
+from app.domain.services.alert_service import evaluate_alerts
 from app.domain.value_objects.initiative_status import InitiativeStatus
 from app.domain.value_objects.sprint_range import SprintRange
 
@@ -53,7 +53,6 @@ class _Deallocation:
     memberships: SquadMembershipRepository
     muted_alerts: MutedAlertRepository
     clock: Clock
-    alert_service: AlertService = field(default_factory=AlertService)
 
     def _result(
         self,
@@ -74,9 +73,7 @@ class _Deallocation:
         return DeallocationResultView(
             removed=removed,
             initiative_status=self._recalculate(initiative),
-            alerts=tuple(
-                self.alert_service.evaluate(snapshot, load_mutes(self.muted_alerts))
-            ),
+            alerts=tuple(evaluate_alerts(snapshot, load_mutes(self.muted_alerts))),
         )
 
     def _recalculate(self, initiative: Initiative) -> InitiativeStatus:

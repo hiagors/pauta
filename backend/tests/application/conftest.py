@@ -130,13 +130,13 @@ class Fakes:
     def use_case[T](self, cls: type[T]) -> T:
         """Instancia o use case injetando as portas pelo nome do campo.
 
-        Campo que o feixe não tem — `alert_service`, que tem default — fica
-        com o default do próprio use case.
+        Sem `hasattr`, pelo mesmo motivo do feixe de verdade (`http/deps.py`):
+        campo do use case que o feixe não tem é erro na hora, não um default
+        silencioso. É o que faz esta suíte e a de HTTP falharem juntas quando
+        um use case ganha uma porta nova.
         """
         wanted = {item.name for item in dataclasses.fields(cls)}
-        return cls(
-            **{name: getattr(self, name) for name in wanted if hasattr(self, name)}
-        )
+        return cls(**{name: getattr(self, name) for name in wanted})
 
 
 @dataclass

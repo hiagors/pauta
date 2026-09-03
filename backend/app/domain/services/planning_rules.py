@@ -2,7 +2,7 @@
 
 Reúne três coisas que andam juntas:
 
-1. a **fotografia** (`PlanningSnapshot`) que o `AlertService` e a grade
+1. a **fotografia** (`PlanningSnapshot`) que `evaluate_alerts` e a grade
    consomem — um modelo de leitura imutável que o use case monta a partir dos
    repositórios, para que o domínio nunca receba repositório;
 2. o **calendário de sprints**: invariantes do conjunto (§6.6), sprint atual
