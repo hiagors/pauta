@@ -59,7 +59,7 @@ reinicie com `mise run dev:api` ou `mise run dev:web`.
 | `mise run setup` | Prepara a máquina do zero |
 | `mise run dev` | Sobe API (`:8000`) e front (`:4321`) |
 | `mise run test` | `pytest` + `vitest` |
-| `mise run lint` | `ruff check`, `ruff format --check` e `mypy --strict` no domínio e na aplicação |
+| `mise run lint` | `ruff check`, `ruff format --check` e `mypy --strict` em `app/` inteiro, adapters inclusive |
 | `mise run fmt` | Formata o backend com o `ruff` |
 | `mise run types` | Regenera `frontend/src/lib/types.ts` a partir do OpenAPI (exige a API no ar) |
 | `mise run snapshot` | Exporta o snapshot para a pasta sincronizada |
@@ -199,9 +199,9 @@ Com `mise run dev:api` no ar, a documentação navegável da API fica em
 <http://127.0.0.1:8000/docs> e o OpenAPI em `/api/v1/openapi.json`. Todos os
 endpoints da seção 8 do spec existem.
 
-Três pontos seguem abertos na seção 16 do spec, cada um com uma premissa em
-vigor que o código segue. O mais visível é o `MEMBER_IDLE` sem teto: com o time
-inteiro cadastrado, quase toda sprint futura tem alguém sem frente, e o painel
-enche de itens informativos. Eles não entram no contador do sino, e o ícone da
-coluna da grade só fica vermelho quando há aviso de verdade — mas o teto
-continua sendo a decisão que resolve isso de fato.
+A seção 16 do spec — os pontos abertos — está vazia desde 03/09/2026. O mais
+visível dos três era o `MEMBER_IDLE` sem teto: com o time inteiro cadastrado,
+quase toda sprint futura tem alguém sem frente, e o painel enchia de itens
+informativos. Ele passou a ter horizonte de três sprints, a atual e as duas
+seguintes. Além disso, "fulano está sem frente" descreve plano ainda não
+escrito, não ociosidade.

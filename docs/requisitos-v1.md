@@ -315,13 +315,14 @@ dailies e demandas possam referenciá-los depois sem migração.
 
 ## 12. O que ainda não está decidido
 
-Três pontos menores, com a premissa que vale até haver decisão. A versão completa,
-com o impacto de cada um, está no `spec.md` §16.
+Nada. Os três pontos que estavam aqui foram decididos em 03/09/2026:
 
-1. **Trimestre.** A grade abre no trimestre civil. Se o time usa trimestre fiscal
-   deslocado, muda o default.
-2. **Volume do alerta "membro sem alocação".** Hoje ele olha da sprint atual até a
-   última cadastrada, sem teto. Pode virar ruído; o corte natural seria a sprint
-   atual mais as duas seguintes.
-3. **Membro inativado com composição em sprint futura.** Hoje ele simplesmente
-   desaparece dos alertas e a composição fica no histórico. Não há aviso.
+1. **Trimestre.** A grade abre no trimestre **civil** — jan–mar, abr–jun, jul–set,
+   out–dez. Um trimestre fiscal deslocado continua sendo uma troca barata.
+2. **Volume do alerta "membro sem alocação".** Ele passou a olhar só a sprint atual e
+   as duas seguintes. Sem esse corte, quase toda sprint futura tinha alguém sem
+   frente, e o painel enchia de avisos que ninguém lia. Mais adiante que isso, "sem
+   frente" quer dizer "ainda não planejado", não "parado".
+3. **Membro inativado com composição em sprint futura.** A matriz de composição agora
+   avisa, discretamente, quem está inativo e ainda aparece na janela. A composição
+   continua no histórico — o aviso é para ela não ficar invisível.
