@@ -23,7 +23,7 @@ ALLOWED = [
 
 
 @pytest.mark.parametrize(("current", "requested"), ALLOWED)
-def test_transicoes_manuais_permitidas(
+def test_the_allowed_manual_transitions(
     current: InitiativeStatus, requested: InitiativeStatus
 ) -> None:
     assert current.can_change_to(requested)
@@ -52,24 +52,24 @@ def test_transicoes_manuais_permitidas(
         (S.PLANNED, S.DEPRIORITIZED),
     ],
 )
-def test_transicoes_manuais_proibidas(
+def test_the_forbidden_manual_transitions(
     current: InitiativeStatus, requested: InitiativeStatus
 ) -> None:
     assert not current.can_change_to(requested)
 
 
-def test_a_tabela_cobre_todos_os_status() -> None:
+def test_the_table_covers_every_status() -> None:
     assert set(MANUAL_TRANSITIONS) == set(InitiativeStatus)
 
 
-def test_terminais_nao_tem_saida_e_nao_aceitam_alocacao() -> None:
+def test_terminal_statuses_have_no_exit_and_refuse_allocation() -> None:
     for status in (S.DONE, S.CANCELLED):
         assert status.is_terminal
         assert not status.accepts_allocation
         assert MANUAL_TRANSITIONS[status] == frozenset()
 
 
-def test_os_outros_quatro_aceitam_alocacao() -> None:
+def test_the_other_four_accept_allocation() -> None:
     for status in (S.BACKLOG, S.PLANNED, S.IN_PROGRESS, S.DEPRIORITIZED):
         assert status.accepts_allocation
         assert not status.is_terminal

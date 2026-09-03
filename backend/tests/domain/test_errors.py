@@ -7,7 +7,7 @@ import pytest
 from app.domain import errors
 from app.domain.errors import ConflictError, DomainError, NotFoundError
 
-CONCRETAS = [
+CONCRETE_ERRORS = [
     obj
     for _, obj in inspect.getmembers(errors, inspect.isclass)
     if issubclass(obj, DomainError)
@@ -15,22 +15,22 @@ CONCRETAS = [
 ]
 
 
-def test_ha_erros_concretos_para_varrer() -> None:
-    assert len(CONCRETAS) > 20
+def test_there_are_concrete_errors_to_sweep() -> None:
+    assert len(CONCRETE_ERRORS) > 20
 
 
-@pytest.mark.parametrize("erro", CONCRETAS, ids=lambda cls: cls.__name__)
-def test_todo_erro_tem_code(erro: type[DomainError]) -> None:
-    assert erro.code
-    assert erro.code == erro.code.upper()
+@pytest.mark.parametrize("error", CONCRETE_ERRORS, ids=lambda cls: cls.__name__)
+def test_every_errorhas_a_code(error: type[DomainError]) -> None:
+    assert error.code
+    assert error.code == error.code.upper()
 
 
-def test_os_codes_sao_unicos() -> None:
-    codes = [erro.code for erro in CONCRETAS]
+def test_the_codes_are_unique() -> None:
+    codes = [error.code for error in CONCRETE_ERRORS]
     assert len(codes) == len(set(codes))
 
 
-def test_a_hierarquia_da_o_status_http() -> None:
+def test_the_hierarchy_gives_the_http_status() -> None:
     """404 e 409 são subclasses; todo o resto é 422."""
     assert issubclass(errors.SprintNotFound, NotFoundError)
     assert issubclass(errors.AllocationConflict, ConflictError)
@@ -39,15 +39,15 @@ def test_a_hierarquia_da_o_status_http() -> None:
     assert not issubclass(errors.InvalidStatusTransition, ConflictError)
 
 
-def test_a_mensagem_do_spec_e_a_que_sai() -> None:
+def test_the_message_is_the_one_the_spec_writes() -> None:
     assert errors.SprintNotFound(number=25).message == "Sprint 25 não existe."
 
 
-def test_details_carrega_o_que_a_ui_precisa() -> None:
-    erro = errors.SprintNumberGap(19, 20)
-    assert erro.details == {"expected": 19, "received": 20}
+def test_details_carries_what_the_ui_needs() -> None:
+    error = errors.SprintNumberGap(19, 20)
+    assert error.details == {"expected": 19, "received": 20}
 
 
-def test_domain_error_e_excecao() -> None:
+def test_domain_erroris_an_exception() -> None:
     with pytest.raises(DomainError, match="Sprint 25 não existe."):
         raise errors.SprintNotFound(number=25)

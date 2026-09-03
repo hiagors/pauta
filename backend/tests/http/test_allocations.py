@@ -151,13 +151,13 @@ def test_a_capacity_reserve_project_does_not_overload_anyone(api: Api) -> None:
     """Cenário B do §13.1: a segunda frente é de projeto de reserva."""
     api.sprints()
     aurora = api.project("Aurora")["initiatives"][0]
-    ferias = api.project("Férias", is_capacity_reserve=True)["initiatives"][0]
+    vacation = api.project("Férias", is_capacity_reserve=True)["initiatives"][0]
     squad = api.squad("Alfa")
     ana = api.member("Ana")
     api.join(squad["id"], [ana["id"]], 18, 22)
     api.allocate(aurora["id"], 19, 19, squad_id=squad["id"])
 
-    result = api.allocate(ferias["id"], 19, 19, squad_id=squad["id"])
+    result = api.allocate(vacation["id"], 19, 19, squad_id=squad["id"])
 
     assert not [
         alert for alert in result["alerts"] if alert["type"] == "SQUAD_OVERLOADED"

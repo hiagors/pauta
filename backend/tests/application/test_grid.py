@@ -40,11 +40,11 @@ def test_rows_come_grouped_by_project_with_the_color_resolved(
     aurora = world.project("Aurora", color="#0052CC")
     boreal = world.project("Boreal")
     reest = world.initiative(aurora, "Catálogo V1", priority=Priority.HIGH)
-    envio = world.initiative(aurora, "Serviço de Envio", priority=Priority.LOW)
+    shipping = world.initiative(aurora, "Serviço de Envio", priority=Priority.LOW)
     portal = world.initiative(boreal, "Portal Externo")
     squad = world.squad("Alfa")
     world.allocate(reest, 18, squad=squad)
-    world.allocate(envio, 19, squad=squad)
+    world.allocate(shipping, 19, squad=squad)
     world.allocate(portal, 20, squad=squad)
 
     view = fakes.use_case(GetGrid).execute()

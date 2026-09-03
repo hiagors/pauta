@@ -6,32 +6,32 @@ from app.domain.entities.member import Member
 from app.domain.errors import InvalidName
 
 
-def test_criacao() -> None:
+def test_a_member_is_created_active() -> None:
     member = Member.create(name="Ana Martins", short_name="Ana", role="Dados")
     assert member.is_active
 
 
-def test_nome_e_nome_curto_sao_obrigatorios() -> None:
+def test_the_name_and_the_short_name_are_required() -> None:
     with pytest.raises(InvalidName):
         Member.create(name="", short_name="Ana")
     with pytest.raises(InvalidName):
         Member.create(name="Ana", short_name="  ")
 
 
-def test_inativar_nao_apaga() -> None:
+def test_deactivating_does_not_delete() -> None:
     member = Member.create(name="Ana", short_name="Ana")
     member.deactivate()
     assert member.is_active is False
     assert member.name == "Ana"
 
 
-def test_reativar() -> None:
+def test_reactivating() -> None:
     member = Member.create(name="Ana", short_name="Ana")
     member.deactivate()
     member.activate()
     assert member.is_active
 
 
-def test_a_entidade_de_pessoa_nao_tem_nada_de_autenticacao() -> None:
-    campos = set(Member.__dataclass_fields__)
-    assert not campos & {"email", "password", "password_hash", "username"}
+def test_the_person_entity_carries_nothing_about_authentication() -> None:
+    fields = set(Member.__dataclass_fields__)
+    assert not fields & {"email", "password", "password_hash", "username"}

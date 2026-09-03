@@ -200,7 +200,7 @@ def test_projects_are_filtered_by_active_and_by_name_fragment(
 ) -> None:
     """`?q=` é pedaço do nome, sem diferenciar maiúscula (§8)."""
     world.project("Aurora")
-    envio = world.project("Serviço de Envio")
+    shipping = world.project("Serviço de Envio")
     archived = world.project("Antigo")
     archived.deactivate()
     repos.projects.update(archived)
@@ -215,8 +215,8 @@ def test_projects_are_filtered_by_active_and_by_name_fragment(
         "Serviço de Envio",
     }
     assert [item.name for item in repos.projects.list_all(active=False)] == ["Antigo"]
-    assert [item.id for item in repos.projects.list_all(query="envio")] == [envio.id]
-    assert [item.id for item in repos.projects.list_all(query="SERV")] == [envio.id]
+    assert [item.id for item in repos.projects.list_all(query="envio")] == [shipping.id]
+    assert [item.id for item in repos.projects.list_all(query="SERV")] == [shipping.id]
     assert repos.projects.list_all(active=False, query="Aurora") == []
 
 

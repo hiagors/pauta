@@ -10,42 +10,42 @@ ALFA = uid(1)
 ANA = uid(10)
 
 
-def test_a_formula_e_a_do_spec() -> None:
-    esperado = hashlib.sha256(f"MEMBER_CONFLICT|{ANA}|19".encode()).hexdigest()[:32]
-    assert alert_fingerprint(AlertType.MEMBER_CONFLICT, ANA, 19) == esperado
+def test_the_formula_is_the_one_in_the_spec() -> None:
+    expected = hashlib.sha256(f"MEMBER_CONFLICT|{ANA}|19".encode()).hexdigest()[:32]
+    assert alert_fingerprint(AlertType.MEMBER_CONFLICT, ANA, 19) == expected
 
 
-def test_tem_trinta_e_dois_hex() -> None:
+def test_it_is_thirty_two_hex_characters() -> None:
     fingerprint = alert_fingerprint(AlertType.MEMBER_IDLE, ANA, 20)
     assert len(fingerprint) == FINGERPRINT_LENGTH
     assert all(char in "0123456789abcdef" for char in fingerprint)
 
 
-def test_e_deterministico() -> None:
-    primeiro = alert_fingerprint(AlertType.SQUAD_OVERLOADED, ALFA, 19)
-    segundo = alert_fingerprint(AlertType.SQUAD_OVERLOADED, ALFA, 19)
-    assert primeiro == segundo
+def test_it_is_deterministic() -> None:
+    first = alert_fingerprint(AlertType.SQUAD_OVERLOADED, ALFA, 19)
+    second = alert_fingerprint(AlertType.SQUAD_OVERLOADED, ALFA, 19)
+    assert first == second
 
 
-def test_muda_com_o_tipo() -> None:
+def test_it_changes_with_the_alert_type() -> None:
     assert alert_fingerprint(AlertType.MEMBER_CONFLICT, ANA, 19) != alert_fingerprint(
         AlertType.MEMBER_IDLE, ANA, 19
     )
 
 
-def test_muda_com_a_sprint() -> None:
+def test_it_changes_with_the_sprint() -> None:
     assert alert_fingerprint(AlertType.MEMBER_CONFLICT, ANA, 19) != alert_fingerprint(
         AlertType.MEMBER_CONFLICT, ANA, 20
     )
 
 
-def test_muda_com_o_sujeito() -> None:
+def test_it_changes_with_the_subject() -> None:
     assert alert_fingerprint(AlertType.MEMBER_CONFLICT, ANA, 19) != alert_fingerprint(
         AlertType.MEMBER_CONFLICT, uid(11), 19
     )
 
 
-def test_o_sujeito_e_a_squad_nos_alertas_de_squad() -> None:
+def test_the_subject_of_a_squad_alert_is_the_squad() -> None:
     """Nenhuma iniciativa entra no hash: o sujeito é o único eixo além da sprint."""
     assert alert_fingerprint(AlertType.EMPTY_SQUAD, ALFA, 21) == alert_fingerprint(
         AlertType.EMPTY_SQUAD, ALFA, 21

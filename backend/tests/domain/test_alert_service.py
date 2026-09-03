@@ -38,7 +38,7 @@ def of_type(alerts: list[Alert], alert_type: AlertType) -> list[Alert]:
     return [alert for alert in alerts if alert.type is alert_type]
 
 
-class TestCenarioA:
+class TestScenarioA:
     """Squad Alfa em duas iniciativas na Sprint 19 -> SQUAD_OVERLOADED na 19."""
 
     def snapshot(self) -> PlanningSnapshot:
@@ -54,51 +54,43 @@ class TestCenarioA:
             current_sprint_number=18,
         )
 
-    def test_dispara_na_sprint_19(self) -> None:
+    def test_it_fires_on_sprint_19(self) -> None:
         alerts = of_type(evaluate_alerts(self.snapshot()), AlertType.SQUAD_OVERLOADED)
         assert [alert.sprint_number for alert in alerts] == [19]
 
-    def test_severidade_e_warning(self) -> None:
-        alerta = of_type(evaluate_alerts(self.snapshot()), AlertType.SQUAD_OVERLOADED)[
-            0
-        ]
-        assert alerta.severity is Severity.WARNING
+    def test_the_severity_is_warning(self) -> None:
+        alert = of_type(evaluate_alerts(self.snapshot()), AlertType.SQUAD_OVERLOADED)[0]
+        assert alert.severity is Severity.WARNING
 
-    def test_a_mensagem_e_especifica(self) -> None:
-        alerta = of_type(evaluate_alerts(self.snapshot()), AlertType.SQUAD_OVERLOADED)[
-            0
-        ]
-        assert alerta.message == (
+    def test_the_message_is_specific(self) -> None:
+        alert = of_type(evaluate_alerts(self.snapshot()), AlertType.SQUAD_OVERLOADED)[0]
+        assert alert.message == (
             "Squad Alfa está em 2 iniciativas na Sprint 19: "
             "Aurora / Catálogo e Boreal / Portal Externo."
         )
 
-    def test_entity_refs_sao_objetos_tipados(self) -> None:
-        alerta = of_type(evaluate_alerts(self.snapshot()), AlertType.SQUAD_OVERLOADED)[
-            0
-        ]
-        assert alerta.entity_refs[0].type is EntityRefType.SQUAD
-        assert alerta.entity_refs[0].id == ALFA
-        tipos = {ref.type for ref in alerta.entity_refs}
-        assert tipos == {
+    def test_entity_refs_are_typed_objects(self) -> None:
+        alert = of_type(evaluate_alerts(self.snapshot()), AlertType.SQUAD_OVERLOADED)[0]
+        assert alert.entity_refs[0].type is EntityRefType.SQUAD
+        assert alert.entity_refs[0].id == ALFA
+        types = {ref.type for ref in alert.entity_refs}
+        assert types == {
             EntityRefType.SQUAD,
             EntityRefType.INITIATIVE,
             EntityRefType.PROJECT,
         }
 
-    def test_o_sujeito_do_fingerprint_e_a_squad(self) -> None:
-        alerta = of_type(evaluate_alerts(self.snapshot()), AlertType.SQUAD_OVERLOADED)[
-            0
-        ]
-        assert alerta.fingerprint == alert_fingerprint(
+    def test_the_fingerprint_subject_is_the_squad(self) -> None:
+        alert = of_type(evaluate_alerts(self.snapshot()), AlertType.SQUAD_OVERLOADED)[0]
+        assert alert.fingerprint == alert_fingerprint(
             AlertType.SQUAD_OVERLOADED, ALFA, 19
         )
 
 
-class TestCenarioB:
+class TestScenarioB:
     """A segunda iniciativa é de projeto reserva -> nenhum alerta de sobrecarga."""
 
-    def test_reserva_nao_conta_para_squad_overloaded(self) -> None:
+    def test_capacity_reserve_does_not_count_towards_squad_overloaded(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(19,),
             allocations=(
@@ -115,7 +107,7 @@ class TestCenarioB:
         assert of_type(alerts, AlertType.MEMBER_CONFLICT) == []
 
 
-class TestCenarioC:
+class TestScenarioC:
     """Ana em Alfa e Beta na 19 -> MEMBER_CONFLICT na 19."""
 
     def snapshot(self) -> PlanningSnapshot:
@@ -134,33 +126,33 @@ class TestCenarioC:
             current_sprint_number=19,
         )
 
-    def test_dispara_na_sprint_19(self) -> None:
+    def test_it_fires_on_sprint_19(self) -> None:
         alerts = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_CONFLICT)
         assert [alert.sprint_number for alert in alerts] == [19]
         assert alerts[0].severity is Severity.WARNING
 
-    def test_a_mensagem_e_a_frase_do_spec(self) -> None:
-        alerta = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_CONFLICT)[0]
-        assert alerta.message == (
+    def test_the_message_is_the_sentence_of_the_spec(self) -> None:
+        alert = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_CONFLICT)[0]
+        assert alert.message == (
             "Ana está nas squads Alfa e Beta, alocadas na Sprint 19 "
             "em Aurora / Serviço de Envio e Boreal / Catálogo."
         )
 
-    def test_o_sujeito_do_fingerprint_e_o_membro(self) -> None:
-        alerta = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_CONFLICT)[0]
-        assert alerta.subject_id == ANA
-        assert alerta.fingerprint == alert_fingerprint(
+    def test_the_fingerprint_subject_is_the_member(self) -> None:
+        alert = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_CONFLICT)[0]
+        assert alert.subject_id == ANA
+        assert alert.fingerprint == alert_fingerprint(
             AlertType.MEMBER_CONFLICT, ANA, 19
         )
 
-    def test_as_squads_envolvidas_aparecem_nas_refs(self) -> None:
-        alerta = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_CONFLICT)[0]
+    def test_the_squads_behind_it_appear_in_the_refs(self) -> None:
+        alert = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_CONFLICT)[0]
         squads = [
-            ref.name for ref in alerta.entity_refs if ref.type is EntityRefType.SQUAD
+            ref.name for ref in alert.entity_refs if ref.type is EntityRefType.SQUAD
         ]
         assert squads == ["Alfa", "Beta"]
 
-    def test_alocacao_direta_junto_com_squad_tambem_e_conflito(self) -> None:
+    def test_a_direct_allocation_alongside_a_squad_is_also_a_conflict(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(19,),
             allocations=(
@@ -172,17 +164,17 @@ class TestCenarioC:
             members={ANA: "Ana"},
             current_sprint_number=19,
         )
-        alerta = of_type(evaluate_alerts(snapshot), AlertType.MEMBER_CONFLICT)[0]
-        assert alerta.message == (
+        alert = of_type(evaluate_alerts(snapshot), AlertType.MEMBER_CONFLICT)[0]
+        assert alert.message == (
             "Ana está em 2 iniciativas na Sprint 19: "
             "Aurora / Serviço de Envio e Boreal / Catálogo."
         )
 
 
-class TestCenarioD:
+class TestScenarioD:
     """Carla em Beta nas 18-19 e em Alfa da 20 em diante -> nenhum alerta."""
 
-    def test_composicao_por_sprint_nao_gera_conflito(self) -> None:
+    def test_a_composition_that_changes_between_sprints_is_not_a_conflict(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(18, 19, 20, 21),
             allocations=(
@@ -208,7 +200,7 @@ class TestCenarioD:
         assert of_type(alerts, AlertType.SQUAD_OVERLOADED) == []
 
 
-class TestCenarioE:
+class TestScenarioE:
     """Diana ativa, sem nada na Sprint 20 (futura) -> MEMBER_IDLE na 20."""
 
     def snapshot(self) -> PlanningSnapshot:
@@ -229,31 +221,31 @@ class TestCenarioE:
             current_sprint_number=19,
         )
 
-    def test_dispara_da_sprint_atual_em_diante(self) -> None:
+    def test_it_fires_from_the_current_sprint_onwards(self) -> None:
         alerts = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_IDLE)
         assert [(a.sprint_number, a.subject_id) for a in alerts] == [
             (19, DIANA),
             (20, DIANA),
         ]
 
-    def test_nao_olha_para_o_passado(self) -> None:
+    def test_it_does_not_look_at_the_past(self) -> None:
         """Sprint 18 já passou: quem não estava em nada lá não é notícia."""
         alerts = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_IDLE)
         assert 18 not in {alert.sprint_number for alert in alerts}
 
-    def test_severidade_e_info(self) -> None:
-        alerta = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_IDLE)[0]
-        assert alerta.severity is Severity.INFO
-        assert alerta.message == "Diana não está em nenhuma frente na Sprint 19."
+    def test_the_severity_is_info(self) -> None:
+        alert = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_IDLE)[0]
+        assert alert.severity is Severity.INFO
+        assert alert.message == "Diana não está em nenhuma frente na Sprint 19."
 
-    def test_quem_tem_frente_nao_aparece(self) -> None:
+    def test_whoever_has_a_front_does_not_appear(self) -> None:
         alerts = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_IDLE)
         assert ANA not in {alert.subject_id for alert in alerts}
 
-    def test_membro_inativo_nao_aparece(self) -> None:
+    def test_an_inactive_member_does_not_appear(self) -> None:
         """Premissa A3: inativo só desaparece."""
         snapshot = self.snapshot()
-        sem_diana = PlanningSnapshot(
+        without_diana = PlanningSnapshot(
             sprint_numbers=snapshot.sprint_numbers,
             allocations=snapshot.allocations,
             memberships=snapshot.memberships,
@@ -261,9 +253,9 @@ class TestCenarioE:
             members={ANA: "Ana"},
             current_sprint_number=19,
         )
-        assert of_type(evaluate_alerts(sem_diana), AlertType.MEMBER_IDLE) == []
+        assert of_type(evaluate_alerts(without_diana), AlertType.MEMBER_IDLE) == []
 
-    def test_quem_esta_so_na_reserva_e_ocioso(self) -> None:
+    def test_whoever_is_only_in_capacity_reserve_is_idle(self) -> None:
         """N3: reserva não consome capacidade, então não preenche a sprint.
 
         A flag existe para a sustentação não travar a pessoa (§3, §15). Quem
@@ -279,7 +271,7 @@ class TestCenarioE:
         alerts = of_type(evaluate_alerts(snapshot), AlertType.MEMBER_IDLE)
         assert [alert.subject_id for alert in alerts] == [DIANA]
 
-    def test_a_mensagem_de_quem_esta_so_na_reserva_diz_isso(self) -> None:
+    def test_the_message_of_someone_only_in_capacity_reserve_says_so(self) -> None:
         """Dizer "não está em nenhuma frente" para quem está de plantão seria
         falso, e alerta que mente é alerta que se aprende a ignorar."""
         snapshot = PlanningSnapshot(
@@ -289,19 +281,19 @@ class TestCenarioE:
             members={DIANA: "Diana"},
             current_sprint_number=20,
         )
-        (alerta,) = of_type(evaluate_alerts(snapshot), AlertType.MEMBER_IDLE)
-        assert alerta.message == (
+        (alert,) = of_type(evaluate_alerts(snapshot), AlertType.MEMBER_IDLE)
+        assert alert.message == (
             "Diana está só em reserva de capacidade na Sprint 20: "
             "Plantão / Sustentação."
         )
         refs = [
             ref.name
-            for ref in alerta.entity_refs
+            for ref in alert.entity_refs
             if ref.type is EntityRefType.INITIATIVE
         ]
         assert refs == ["Sustentação"]
 
-    def test_sem_sprint_iniciada_toda_a_janela_e_futura(self) -> None:
+    def test_with_no_sprint_started_the_whole_window_is_future(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(18, 19),
             members={DIANA: "Diana"},
@@ -311,7 +303,7 @@ class TestCenarioE:
         assert [alert.sprint_number for alert in alerts] == [18, 19]
 
 
-class TestCenarioF:
+class TestScenarioF:
     """Gama alocada em API de Cobrança na 21, sem composição na 21 -> EMPTY_SQUAD."""
 
     def snapshot(self) -> PlanningSnapshot:
@@ -324,19 +316,19 @@ class TestCenarioF:
             current_sprint_number=20,
         )
 
-    def test_dispara_na_sprint_21(self) -> None:
+    def test_it_fires_on_sprint_21(self) -> None:
         alerts = of_type(evaluate_alerts(self.snapshot()), AlertType.EMPTY_SQUAD)
         assert [alert.sprint_number for alert in alerts] == [21]
         assert alerts[0].severity is Severity.INFO
 
-    def test_a_mensagem_diz_onde_e_o_furo(self) -> None:
-        alerta = of_type(evaluate_alerts(self.snapshot()), AlertType.EMPTY_SQUAD)[0]
-        assert alerta.message == (
+    def test_the_message_says_where_the_hole_is(self) -> None:
+        alert = of_type(evaluate_alerts(self.snapshot()), AlertType.EMPTY_SQUAD)[0]
+        assert alert.message == (
             "Squad Gama está alocada em Pagamentos / API de Cobrança na Sprint 21, "
             "mas não tem ninguém na composição dessa sprint."
         )
 
-    def test_squad_com_composicao_nao_dispara(self) -> None:
+    def test_a_squad_with_a_composition_does_not_fire(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(21,),
             allocations=(squad_alloc(21, COBRANCA, GAMA),),
@@ -347,7 +339,7 @@ class TestCenarioF:
         )
         assert of_type(evaluate_alerts(snapshot), AlertType.EMPTY_SQUAD) == []
 
-    def test_squad_sem_alocacao_nao_dispara(self) -> None:
+    def test_a_squad_without_allocation_does_not_fire(self) -> None:
         """D16: squad sem frente não é problema; pessoa sem frente é."""
         snapshot = PlanningSnapshot(
             sprint_numbers=(21,),
@@ -356,7 +348,7 @@ class TestCenarioF:
         )
         assert of_type(evaluate_alerts(snapshot), AlertType.EMPTY_SQUAD) == []
 
-    def test_alocacao_direta_a_membro_nao_dispara_empty_squad(self) -> None:
+    def test_a_direct_member_allocation_does_not_fire_empty_squad(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(21,),
             allocations=(member_alloc(21, COBRANCA, BRUNO),),
@@ -366,7 +358,7 @@ class TestCenarioF:
         )
         assert of_type(evaluate_alerts(snapshot), AlertType.EMPTY_SQUAD) == []
 
-    def test_squad_inativa_nao_dispara(self) -> None:
+    def test_an_inactive_squad_does_not_fire(self) -> None:
         """N1: o §7.3 escreve "squad ativa" aqui, e só aqui do lado da squad.
 
         Cobrar composição de um agrupamento que acabou é pedir contratação para
@@ -382,7 +374,7 @@ class TestCenarioF:
         assert of_type(evaluate_alerts(snapshot), AlertType.EMPTY_SQUAD) == []
 
 
-class TestSquadInativa:
+class TestInactiveSquad:
     """N1: a assimetria do §7.3 entre os dois alertas de squad."""
 
     def snapshot(self) -> PlanningSnapshot:
@@ -397,24 +389,24 @@ class TestSquadInativa:
             current_sprint_number=19,
         )
 
-    def test_squad_inativa_ainda_fica_sobrecarregada(self) -> None:
+    def test_an_inactive_squad_is_still_overloaded(self) -> None:
         """`SQUAD_OVERLOADED` é o único dos quatro que o §7.3 não qualifica com
         "ativa": inativar a squad não apaga as duas frentes que ela deixou."""
         alerts = of_type(evaluate_alerts(self.snapshot()), AlertType.SQUAD_OVERLOADED)
         assert [alert.subject_id for alert in alerts] == [ALFA]
 
-    def test_a_squad_ativa_continua_disparando(self) -> None:
-        ativa = PlanningSnapshot(
+    def test_an_active_squad_keeps_firing(self) -> None:
+        active_squad = PlanningSnapshot(
             sprint_numbers=(19,),
             allocations=self.snapshot().allocations,
             squads={ALFA: "Alfa"},
             current_sprint_number=19,
         )
-        alerts = of_type(evaluate_alerts(ativa), AlertType.SQUAD_OVERLOADED)
+        alerts = of_type(evaluate_alerts(active_squad), AlertType.SQUAD_OVERLOADED)
         assert [alert.subject_id for alert in alerts] == [ALFA]
 
 
-class TestCenarioG:
+class TestScenarioG:
     """Silenciar o conflito da Ana e depois mexer nas iniciativas."""
 
     def snapshot(self, *, terceira: bool) -> PlanningSnapshot:
@@ -444,26 +436,26 @@ class TestCenarioG:
             clock=FrozenClock(datetime.now(UTC).date()),
         )
 
-    def test_silenciado_vem_marcado_e_nao_desaparece(self) -> None:
+    def test_a_muted_alert_comes_marked_and_does_not_disappear(self) -> None:
         mute = self.mute()
-        alerta = of_type(
+        alert = of_type(
             evaluate_alerts(self.snapshot(terceira=False), {mute.fingerprint: mute}),
             AlertType.MEMBER_CONFLICT,
         )[0]
-        assert alerta.is_muted
-        assert alerta.mute_id == mute.id
-        assert alerta.mute_reason == mute.reason
+        assert alert.is_muted
+        assert alert.mute_id == mute.id
+        assert alert.mute_reason == mute.reason
 
-    def test_o_silenciamento_sobrevive_a_uma_terceira_iniciativa(self) -> None:
+    def test_the_mute_survives_a_third_initiative(self) -> None:
         mute = self.mute()
-        alerta = of_type(
+        alert = of_type(
             evaluate_alerts(self.snapshot(terceira=True), {mute.fingerprint: mute}),
             AlertType.MEMBER_CONFLICT,
         )[0]
-        assert alerta.is_muted
-        assert alerta.fingerprint == mute.fingerprint
+        assert alert.is_muted
+        assert alert.fingerprint == mute.fingerprint
 
-    def test_o_silenciamento_de_uma_sprint_nao_vale_para_outra(self) -> None:
+    def test_a_mute_on_one_sprint_does_not_apply_to_another(self) -> None:
         mute = self.mute()
         snapshot = PlanningSnapshot(
             sprint_numbers=(19, 20),
@@ -492,17 +484,17 @@ class TestCenarioG:
             (20, False),
         ]
 
-    def test_alerta_nao_silenciado_fica_intacto(self) -> None:
-        alerta = of_type(
+    def test_an_unmuted_alert_stays_intact(self) -> None:
+        alert = of_type(
             evaluate_alerts(self.snapshot(terceira=False)), AlertType.MEMBER_CONFLICT
         )[0]
-        assert not alerta.is_muted
-        assert alerta.mute_id is None
-        assert alerta.mute_reason is None
+        assert not alert.is_muted
+        assert alert.mute_id is None
+        assert alert.mute_reason is None
 
 
-class TestOrdemESaida:
-    def test_ordena_por_sprint_e_depois_por_tipo(self) -> None:
+class TestOrderAndOutput:
+    def test_it_sorts_by_sprint_and_then_by_type(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(19, 20),
             allocations=(
@@ -525,25 +517,25 @@ class TestOrdemESaida:
             (20, AlertType.EMPTY_SQUAD),
         ]
 
-    def test_e_deterministico_entre_execucoes(self) -> None:
+    def test_it_is_deterministic_across_runs(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(19,),
             members={DIANA: "Diana", ANA: "Ana", BRUNO: "Bruno"},
             current_sprint_number=19,
         )
-        primeiro = [a.fingerprint for a in evaluate_alerts(snapshot)]
-        segundo = [a.fingerprint for a in evaluate_alerts(snapshot)]
-        assert primeiro == segundo
+        first = [a.fingerprint for a in evaluate_alerts(snapshot)]
+        second = [a.fingerprint for a in evaluate_alerts(snapshot)]
+        assert first == second
         assert [a.subject_id for a in evaluate_alerts(snapshot)] == [
             ANA,
             BRUNO,
             DIANA,
         ]
 
-    def test_plano_vazio_nao_gera_alerta(self) -> None:
+    def test_an_empty_plan_generates_no_alert(self) -> None:
         assert evaluate_alerts(PlanningSnapshot(sprint_numbers=())) == []
 
-    def test_alerta_nunca_bloqueia_nada(self) -> None:
+    def test_an_alert_never_blocks_anything(self) -> None:
         """Todos são aviso visual: o serviço não levanta exceção."""
         snapshot = PlanningSnapshot(
             sprint_numbers=(19,),

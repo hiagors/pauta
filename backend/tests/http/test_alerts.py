@@ -209,7 +209,7 @@ def test_a_third_front_does_not_undo_the_mute(api: Api) -> None:
     api.sprints()
     aurora = api.project("Aurora")["initiatives"][0]
     boreal = api.project("Boreal")["initiatives"][0]
-    cobranca = api.project("API de Cobrança")["initiatives"][0]
+    billing = api.project("API de Cobrança")["initiatives"][0]
     alfa = api.squad("Alfa")
     ana = api.member("Ana")
     api.join(alfa["id"], [ana["id"]], 19, 19)
@@ -225,7 +225,7 @@ def test_a_third_front_does_not_undo_the_mute(api: Api) -> None:
         },
     )
 
-    result = api.allocate(cobranca["id"], 19, 19, squad_id=alfa["id"])
+    result = api.allocate(billing["id"], 19, 19, squad_id=alfa["id"])
 
     still_muted = [
         alert for alert in result["alerts"] if alert["type"] == "SQUAD_OVERLOADED"

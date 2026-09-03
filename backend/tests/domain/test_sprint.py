@@ -8,7 +8,7 @@ from app.domain.entities.sprint import Sprint
 from app.domain.errors import InvalidSprintDates, InvalidSprintNumber
 
 
-def test_o_padrao_do_dado_real_tem_onze_dias() -> None:
+def test_the_real_world_default_is_eleven_days() -> None:
     """Sprint 18: segunda 31/08/2026 a sexta 11/09/2026."""
     sprint = Sprint.create(
         number=18, start_date=date(2026, 8, 31), end_date=date(2026, 9, 11)
@@ -18,21 +18,21 @@ def test_o_padrao_do_dado_real_tem_onze_dias() -> None:
     assert sprint.end_date.weekday() == 4
 
 
-def test_fim_precisa_ser_posterior_ao_inicio() -> None:
+def test_the_end_must_be_after_the_start() -> None:
     with pytest.raises(InvalidSprintDates):
         Sprint.create(
             number=18, start_date=date(2026, 8, 31), end_date=date(2026, 8, 31)
         )
 
 
-def test_numero_precisa_ser_positivo() -> None:
+def test_the_number_must_be_positive() -> None:
     with pytest.raises(InvalidSprintNumber):
         Sprint.create(
             number=0, start_date=date(2026, 8, 31), end_date=date(2026, 9, 11)
         )
 
 
-def test_intersects_a_janela_da_grade() -> None:
+def test_intersects_the_window_of_the_grid() -> None:
     sprint = Sprint.create(
         number=18, start_date=date(2026, 8, 31), end_date=date(2026, 9, 11)
     )
@@ -41,6 +41,6 @@ def test_intersects_a_janela_da_grade() -> None:
     assert not sprint.intersects(date(2026, 9, 12), date(2026, 12, 31))
 
 
-def test_nao_existe_forma_de_excluir_uma_sprint() -> None:
+def test_there_is_no_way_to_delete_a_sprint() -> None:
     """D13, do lado do domínio: nada aqui remove sprint."""
-    assert not [nome for nome in dir(Sprint) if nome in {"delete", "remove", "archive"}]
+    assert not [name for name in dir(Sprint) if name in {"delete", "remove", "archive"}]

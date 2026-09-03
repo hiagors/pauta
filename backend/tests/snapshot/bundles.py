@@ -48,7 +48,7 @@ def full_bundle() -> SnapshotBundle:
         description="Frente de relacionamento",
         color=Color("#0052CC"),
     )
-    reserva = Project(
+    reserve = Project(
         id=uid(2),
         name="Reserva de capacidade",
         is_capacity_reserve=True,
@@ -59,7 +59,7 @@ def full_bundle() -> SnapshotBundle:
     )
     alfa = Squad(id=uid(21), name="Alfa", representative_member_id=ana.id)
     beta = Squad(id=uid(22), name="Beta", is_active=False)
-    catalogo = Initiative(
+    catalog = Initiative(
         id=uid(31),
         project_id=aurora.id,
         name="Catálogo V1",
@@ -70,15 +70,15 @@ def full_bundle() -> SnapshotBundle:
         estimated_sprints=5,
         status=InitiativeStatus.IN_PROGRESS,
     )
-    suporte = Initiative(
+    support = Initiative(
         id=uid(32),
-        project_id=reserva.id,
+        project_id=reserve.id,
         name="Suporte e imprevistos",
         entered_at=date(2026, 8, 15),
     )
     return SnapshotBundle(
-        projects=(aurora, reserva),
-        initiatives=(catalogo, suporte),
+        projects=(aurora, reserve),
+        initiatives=(catalog, support),
         members=(ana, diana),
         squads=(alfa, beta),
         squad_memberships=(
@@ -99,19 +99,19 @@ def full_bundle() -> SnapshotBundle:
         allocations=(
             Allocation(
                 id=uid(51),
-                initiative_id=catalogo.id,
+                initiative_id=catalog.id,
                 sprint_id=SPRINT_18.id,
                 assignee=Assignee.for_squad(alfa.id),
             ),
             Allocation(
                 id=uid(52),
-                initiative_id=catalogo.id,
+                initiative_id=catalog.id,
                 sprint_id=SPRINT_19.id,
                 assignee=Assignee.for_squad(alfa.id),
             ),
             Allocation(
                 id=uid(53),
-                initiative_id=suporte.id,
+                initiative_id=support.id,
                 sprint_id=SPRINT_19.id,
                 assignee=Assignee.for_member(diana.id),
             ),

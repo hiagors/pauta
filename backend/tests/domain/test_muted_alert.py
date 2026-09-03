@@ -20,21 +20,21 @@ def make(reason: str = "Conflito conhecido e intencional.") -> MutedAlert:
     )
 
 
-def test_created_at_vem_do_clock_em_utc() -> None:
+def test_created_at_comes_from_the_clock_in_utc() -> None:
     mute = make()
     assert mute.created_at == datetime(2026, 9, 2, 12, 0, tzinfo=UTC)
 
 
-def test_motivo_e_obrigatorio() -> None:
+def test_the_reason_is_required() -> None:
     with pytest.raises(MuteReasonRequired):
         make(reason="   ")
 
 
-def test_motivo_e_normalizado() -> None:
+def test_the_reason_is_normalized() -> None:
     assert make(reason="  porque sim  ").reason == "porque sim"
 
 
-def test_datetime_sem_timezone_e_recusado() -> None:
+def test_a_naive_datetime_is_refused() -> None:
     with pytest.raises(InvalidTimestamp):
         MutedAlert(
             id=uid(1),
@@ -45,7 +45,7 @@ def test_datetime_sem_timezone_e_recusado() -> None:
         )
 
 
-def test_datetime_em_outro_fuso_e_convertido_para_utc() -> None:
+def test_a_datetime_in_another_timezone_is_converted_to_utc() -> None:
     mute = MutedAlert(
         id=uid(1),
         alert_type=AlertType.MEMBER_CONFLICT,
