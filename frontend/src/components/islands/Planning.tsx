@@ -1,6 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { api, type MemberOut, type SprintOut, type SquadOut } from '../../lib/api';
+import {
+  api,
+  type GridOut,
+  type MemberOut,
+  type SprintOut,
+  type SquadOut,
+} from '../../lib/api';
 import { pluralize } from '../../lib/format';
 import type { GridBar, ListSortKey, SortDirection, SprintRange } from '../../lib/planning';
 import { withQuery } from '../../lib/query';
@@ -16,7 +22,7 @@ import {
   type AllocationSubject,
   type BarAction,
 } from './AllocationDialog';
-import { PlanningGrid } from './PlanningGrid';
+import { CAPACITY_RESERVE_STRIPES, PlanningGrid } from './PlanningGrid';
 import { PlanningList } from './PlanningList';
 
 /**
@@ -102,6 +108,8 @@ function Planning() {
 
   return (
     <div className="flex flex-col gap-4">
+      {grid.data && <Summary grid={grid.data} />}
+
       <div className="flex flex-wrap items-end justify-between gap-4">
         <Filters
           params={params}
@@ -178,13 +186,6 @@ function Planning() {
         />
       )}
 
-      {grid.data && (
-        <p className="m-0 text-11 text-text-subtle">
-          {pluralize(grid.data.sprints.length, 'sprint na janela', 'sprints na janela')} ·{' '}
-          {pluralize(grid.data.groups.length, 'projeto', 'projetos')}
-        </p>
-      )}
-
       {allocating && (
         <AllocationDialog
           open
@@ -207,6 +208,56 @@ function Planning() {
 
 function hasFilter(params: PlanningParams): boolean {
   return Boolean(params.squad || params.member || params.from || params.to);
+}
+
+/**
+ * O que a janela contém, e o que as duas marcações da grade querem dizer.
+ *
+ * A legenda só mostra o que está na tela: sem projeto de reserva não há listra
+ * para explicar, e sem sprint atual não há faixa azul. Legenda de coisa
+ * ausente é ruído, e ensina a ignorar a legenda.
+ */
+function Summary({ grid }: { readonly grid: GridOut }) {
+  const first = grid.sprints[0];
+  const last = grid.sprints[grid.sprints.length - 1];
+  const hasReserve = grid.groups.some((group) => group.project.is_capacity_reserve);
+  const hasCurrent = grid.sprints.some((sprint) => sprint.is_current);
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+      <p className="m-0 text-12 text-text-subtle">
+        {pluralize(grid.groups.length, 'projeto', 'projetos')}
+        {first && last && (
+          <>
+            {' · '}
+            {first.number === last.number
+              ? `Sprint ${first.number}`
+              : `Sprints ${first.number} a ${last.number}`}
+          </>
+        )}
+      </p>
+      {(hasCurrent || hasReserve) && (
+        <p className="m-0 flex flex-wrap items-center gap-4 text-11 text-text-subtle">
+          {hasCurrent && (
+            <span className="flex items-center gap-2">
+              <span aria-hidden className="size-3 rounded-sm bg-primary-soft" />
+              Sprint atual
+            </span>
+          )}
+          {hasReserve && (
+            <span className="flex items-center gap-2">
+              <span
+                aria-hidden
+                className="size-3 rounded-sm bg-project-default"
+                style={{ backgroundImage: CAPACITY_RESERVE_STRIPES }}
+              />
+              Reserva de capacidade
+            </span>
+          )}
+        </p>
+      )}
+    </div>
+  );
 }
 
 function ViewToggle({

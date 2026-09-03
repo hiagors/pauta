@@ -35,6 +35,15 @@ import type { AllocationSubject, BarAction } from './AllocationDialog';
 const LEAD_WIDTH = 320;
 const COLUMN_WIDTH = 88;
 
+/**
+ * As listras da reserva de capacidade (§10.2), em um lugar só.
+ *
+ * A barra da grade e a legenda do cabeçalho precisam do mesmo desenho: uma
+ * legenda que não é exatamente o que está na tela é pior que nenhuma legenda.
+ */
+export const CAPACITY_RESERVE_STRIPES =
+  'repeating-linear-gradient(45deg, rgba(255,255,255,.35) 0 4px, transparent 4px 9px)';
+
 export interface PlanningGridProps {
   readonly grid: GridOut;
   readonly onAllocate: (subject: AllocationSubject, range: SprintRange) => void;
@@ -223,12 +232,22 @@ function RowCells({
   const textColor = readableTextOn(project.color);
   return (
     <>
+      {/* Duas linhas: o nome fica com os 320px inteiros antes de truncar, e a
+          prioridade e a camada descem para a segunda. Numa linha só, o nome
+          disputava a largura com o lozenge e era ele que perdia. */}
       <div
-        className="sticky left-0 z-10 flex h-row items-center gap-2 border-r border-b border-border bg-surface px-3"
+        className="sticky left-0 z-10 flex h-row flex-col justify-center border-r border-b border-border bg-surface px-3"
         title={row.initiative.name}
       >
-        <span className="min-w-0 flex-1 truncate text-14">{row.initiative.name}</span>
-        <PriorityLozenge priority={row.initiative.priority} />
+        <span className="truncate text-14 leading-4">{row.initiative.name}</span>
+        <span className="flex min-w-0 items-center gap-2 leading-4">
+          <PriorityLozenge priority={row.initiative.priority} />
+          {row.initiative.layer && (
+            <span className="truncate text-11 text-text-subtle">
+              {row.initiative.layer}
+            </span>
+          )}
+        </span>
       </div>
 
       {rowSegments(row.bars, sprintNumbers).map((segment) => {
@@ -268,7 +287,7 @@ function RowCells({
         return (
           <div
             key={segment.key}
-            className="relative flex h-row items-center border-b border-border px-1"
+            className="relative flex h-row items-center border-b border-border"
             style={{ gridColumn: `span ${segment.span}` }}
           >
             <button
@@ -285,10 +304,10 @@ function RowCells({
                 // (§10.2) — é o que separa "reservado" de "alocado" sem gastar
                 // uma segunda cor.
                 backgroundImage: project.is_capacity_reserve
-                  ? 'repeating-linear-gradient(45deg, rgba(255,255,255,.35) 0 4px, transparent 4px 9px)'
+                  ? CAPACITY_RESERVE_STRIPES
                   : undefined,
               }}
-              className="h-6 w-full truncate rounded-sm px-2 text-left text-11 font-semibold"
+              className="h-8 w-full truncate rounded-sm px-2 text-left text-12 font-semibold"
             >
               {bar.assignee.name}
             </button>

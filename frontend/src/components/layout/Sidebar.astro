@@ -44,9 +44,13 @@ const isActive = (href: string) => pathname === href || pathname === `${href}/`;
           aria-current={isActive(item.href) ? 'page' : undefined}
           class:list={[
             'shell-sidebar-item flex h-8 items-center gap-3 rounded-sm px-2 text-14 no-underline',
+            // A borda existe nos dois estados, transparente no inativo: sem
+            // ela, o item ativo empurraria o ícone 2px para a direita e a
+            // coluna de ícones deixaria de ser uma coluna.
+            'border-l-2',
             isActive(item.href)
-              ? 'bg-primary-soft font-semibold text-primary'
-              : 'text-text hover:bg-neutral-soft',
+              ? 'border-primary bg-primary-soft font-semibold text-primary'
+              : 'border-transparent text-text hover:bg-neutral-soft',
           ]}
         >
           <svg class="icon size-4 shrink-0" aria-hidden="true" focusable="false">
