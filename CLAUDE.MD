@@ -203,3 +203,25 @@ render do cliente.
 Verificação de interação sem dependência nova: Chrome com
 `--remote-debugging-port` e um script Node no scratchpad falando CDP pelo
 `WebSocket` global do Node 24. Não entra `puppeteer` no projeto.
+
+## Nomes nas fixtures e nos docs
+
+Nenhum nome real de projeto, squad, iniciativa ou pessoa entra neste
+repositório — nem em teste, nem em comentário, nem no `spec.md`. O vocabulário
+neutro em vigor:
+
+- projetos: **Aurora**, **Boreal**, **Plantão** (o de `is_capacity_reserve`);
+- iniciativas: **Catálogo V1**, **Serviço de Envio**, **Portal Externo**,
+  **API de Cobrança**;
+- squads: **Alfa**, **Beta**, **Gama**, **Delta**;
+- pessoas: **Ana**, **Carla**, **Bruno**, **Diana** (sobrenomes Martins e
+  Ribeiro).
+
+Trocar um nome quebra assertiva de ordenação alfabética e de busca por
+substring, em lugares que não citam o nome: a ordem esperada em
+`test_projects`, `test_grid`, `test_initiatives` e `test_planning_rules`, as
+frases de alerta em `test_alert_service`, e os fragmentos de `?q=` em
+`test_repository_contract`, que existem para exercitar o `pauta_casefold` e por
+isso precisam de acento no meio da palavra.
+
+O histórico do Git anterior a esta limpeza ainda tem os nomes antigos.

@@ -18,7 +18,7 @@ class CreateInitiative:
     def execute(self, data: CreateInitiativeInput) -> InitiativeView:
         """O nome é único **dentro do projeto** (§6.2), não no sistema.
 
-        Duas "Reestruturação", uma no CRM e uma no BNPL, são normais.
+        Duas "Catálogo", uma no Aurora e uma no Boreal, são normais.
         """
         if self.projects.get(data.project_id) is None:
             raise ProjectNotFound(data.project_id)

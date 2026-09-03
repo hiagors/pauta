@@ -27,9 +27,9 @@ def test_the_sprint_file_says_who_is_on_what(
     text = (directory / "plan-sprint-18.md").read_text(encoding="utf-8")
 
     assert text.startswith("# Sprint 18 — 31/08/2026 a 11/09/2026\n")
-    assert "| CRM | Reestruturação V1 | IN_PROGRESS | Dados-A |" in text
-    assert "| Dados-A | Bianca |" in text, "a composição da sprint (§6.5)"
-    assert "Suporte" not in text, "a alocação da Thalita é na 19"
+    assert "| Aurora | Catálogo V1 | IN_PROGRESS | Alfa |" in text
+    assert "| Alfa | Ana |" in text, "a composição da sprint (§6.5)"
+    assert "Suporte" not in text, "a alocação da Diana é na 19"
 
 
 def test_a_member_allocated_directly_appears_by_the_short_name(
@@ -40,9 +40,7 @@ def test_a_member_allocated_directly_appears_by_the_short_name(
 
     text = (directory / "plan-sprint-19.md").read_text(encoding="utf-8")
 
-    assert (
-        "| Reserva de capacidade | Suporte e imprevistos | BACKLOG | Thalita |" in text
-    )
+    assert "| Reserva de capacidade | Suporte e imprevistos | BACKLOG | Diana |" in text
 
 
 def test_a_pipe_in_a_name_does_not_break_the_table(
@@ -66,8 +64,8 @@ def test_the_grid_has_one_column_per_sprint_and_the_assignee_in_the_cell(
     text = (directory / "plan-grid.md").read_text(encoding="utf-8")
 
     assert "| Projeto | Iniciativa | S18 | S19 |" in text
-    assert "| CRM | Reestruturação V1 | Dados-A | Dados-A |" in text
-    assert "| Reserva de capacidade | Suporte e imprevistos |  | Thalita |" in text
+    assert "| Aurora | Catálogo V1 | Alfa | Alfa |" in text
+    assert "| Reserva de capacidade | Suporte e imprevistos |  | Diana |" in text
     assert "| 18 | 31/08/2026 | 11/09/2026 |" in text
 
 
@@ -87,7 +85,7 @@ def test_an_initiative_without_allocation_is_not_a_row_of_the_grid(
     text = (directory / "plan-grid.md").read_text(encoding="utf-8")
 
     assert "Nenhuma alocação registrada." in text
-    assert "Reestruturação" not in text
+    assert "Catálogo" not in text
 
 
 def test_a_sprint_with_nothing_in_it_says_so(

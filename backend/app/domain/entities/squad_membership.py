@@ -1,8 +1,8 @@
 """Composição da squad em uma sprint (§6.5).
 
 Uma linha por (squad, membro, sprint), no mesmo idioma de `Allocation`. É o que
-resolve o caso da Emilie: BNPL nas sprints 18 e 19, CRM da 20 em diante, sem
-que isso vaze para as sprints anteriores.
+resolve o caso da Carla: Boreal nas sprints 18 e 19, Aurora da 20 em diante,
+sem que isso vaze para as sprints anteriores.
 """
 
 from dataclasses import dataclass

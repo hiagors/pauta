@@ -30,9 +30,9 @@ def test_an_unknown_id_is_404_with_the_code_of_the_entity(api: Api) -> None:
 
 
 def test_a_duplicate_name_is_409(api: Api) -> None:
-    api.project("CRM")
+    api.project("Aurora")
 
-    response = api.post("/projects", json={"name": "CRM"})
+    response = api.post("/projects", json={"name": "Aurora"})
 
     assert response.status_code == 409
     assert error(response)["code"] == "DUPLICATE_NAME"
@@ -40,7 +40,7 @@ def test_a_duplicate_name_is_409(api: Api) -> None:
 
 def test_a_broken_business_rule_is_422_with_the_code_of_the_rule(api: Api) -> None:
     """Transição de status proibida (§6.3): BACKLOG não vai direto a DONE."""
-    project = api.project("CRM")
+    project = api.project("Aurora")
     initiative = project["initiatives"][0]
 
     response = api.post(
@@ -53,18 +53,18 @@ def test_a_broken_business_rule_is_422_with_the_code_of_the_rule(api: Api) -> No
 
 def test_the_error_details_carry_the_data_the_ui_needs(api: Api) -> None:
     """`details` é o que permite o aviso dizer *qual* sprint, *qual* projeto."""
-    project = api.project("CRM")
+    project = api.project("Aurora")
 
-    response = api.post("/projects", json={"name": "CRM"})
+    response = api.post("/projects", json={"name": "Aurora"})
 
-    assert error(response)["details"] == {"entity": "um projeto", "name": "CRM"}
-    assert project["project"]["name"] == "CRM"
+    assert error(response)["details"] == {"entity": "um projeto", "name": "Aurora"}
+    assert project["project"]["name"] == "Aurora"
 
 
 def test_an_allocation_without_an_assignee_is_422(api: Api) -> None:
     """A invariante é do domínio (`Assignee.from_ids`), não do schema (§6.7)."""
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
+    initiative = api.project("Aurora")["initiatives"][0]
 
     response = api.post(
         "/allocations",
@@ -81,9 +81,9 @@ def test_an_allocation_without_an_assignee_is_422(api: Api) -> None:
 
 def test_an_allocation_with_two_assignees_is_422(api: Api) -> None:
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
-    squad = api.squad("Dados-A")
-    member = api.member("Bianca")
+    initiative = api.project("Aurora")["initiatives"][0]
+    squad = api.squad("Alfa")
+    member = api.member("Ana")
 
     response = api.post(
         "/allocations",
@@ -103,7 +103,7 @@ def test_an_allocation_with_two_assignees_is_422(api: Api) -> None:
 def test_a_malformed_body_is_422_in_the_same_envelope(api: Api) -> None:
     """Sem o handler, este erro sairia no formato do FastAPI e o `lib/api.ts`
     precisaria de dois caminhos."""
-    response = api.post("/projects", json={"nome": "CRM"})
+    response = api.post("/projects", json={"nome": "Aurora"})
 
     assert response.status_code == 422
     assert error(response)["code"] == "VALIDATION_ERROR"
@@ -111,7 +111,9 @@ def test_a_malformed_body_is_422_in_the_same_envelope(api: Api) -> None:
 
 def test_an_unknown_field_is_refused_instead_of_ignored(api: Api) -> None:
     """`is_capacity_reserv` escrito errado e aceito em silêncio é pior que 422."""
-    response = api.post("/projects", json={"name": "CRM", "is_capacity_reserv": True})
+    response = api.post(
+        "/projects", json={"name": "Aurora", "is_capacity_reserv": True}
+    )
 
     assert response.status_code == 422
     assert error(response)["code"] == "VALIDATION_ERROR"
@@ -132,15 +134,15 @@ def test_a_failed_request_leaves_nothing_written(api: Api, engine: Engine) -> No
     primeiras sprints ficariam gravadas.
     """
     api.sprints()
-    squad = api.squad("Dados-A")
-    bianca = api.member("Bianca")
+    squad = api.squad("Alfa")
+    ana = api.member("Ana")
 
     response = api.put(
         f"/squads/{squad['id']}/memberships",
         json={
             "sprint_from": 18,
             "sprint_to": 22,
-            "member_ids": [bianca["id"], str(uuid4())],
+            "member_ids": [ana["id"], str(uuid4())],
         },
     )
 
@@ -153,7 +155,7 @@ def test_a_failed_request_leaves_nothing_written(api: Api, engine: Engine) -> No
 
 def test_a_successful_request_is_committed(api: Api, engine: Engine) -> None:
     """O outro lado da moeda: o repositório faz `flush`, e o `commit` é daqui."""
-    api.project("CRM")
+    api.project("Aurora")
 
     with engine.connect() as connection:
         rows = connection.execute(text("SELECT count(*) FROM projects"))

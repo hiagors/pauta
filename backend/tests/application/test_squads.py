@@ -30,7 +30,7 @@ from tests.domain.conftest import uid
 
 
 def test_create_squad_without_representative(fakes: Fakes) -> None:
-    view = fakes.use_case(CreateSquad).execute(CreateSquadInput(name="Dados-A"))
+    view = fakes.use_case(CreateSquad).execute(CreateSquadInput(name="Alfa"))
 
     assert view.representative_member_id is None
     assert view.is_active is True
@@ -46,13 +46,13 @@ def test_create_squad_accepts_a_representative_who_is_not_a_member_yet(
     Na criação a squad não tem membership nenhuma — validar contra a composição
     tornaria impossível cadastrar squad com representante.
     """
-    bianca = world.member("Bianca")
+    ana = world.member("Ana")
 
     view = fakes.use_case(CreateSquad).execute(
-        CreateSquadInput(name="Dados-A", representative_member_id=bianca.id)
+        CreateSquadInput(name="Alfa", representative_member_id=ana.id)
     )
 
-    assert view.representative_member_id == bianca.id
+    assert view.representative_member_id == ana.id
     assert fakes.memberships.list_all(squad_id=view.id) == []
 
 
@@ -63,29 +63,29 @@ def test_create_squad_refuses_an_inactive_representative(
 
     with pytest.raises(InvalidRepresentative):
         fakes.use_case(CreateSquad).execute(
-            CreateSquadInput(name="Dados-A", representative_member_id=ana.id)
+            CreateSquadInput(name="Alfa", representative_member_id=ana.id)
         )
 
 
 def test_create_squad_refuses_an_unknown_representative(fakes: Fakes) -> None:
     with pytest.raises(InvalidRepresentative):
         fakes.use_case(CreateSquad).execute(
-            CreateSquadInput(name="Dados-A", representative_member_id=uid(999))
+            CreateSquadInput(name="Alfa", representative_member_id=uid(999))
         )
 
 
 def test_create_squad_rejects_duplicate_name(fakes: Fakes) -> None:
     create = fakes.use_case(CreateSquad)
-    create.execute(CreateSquadInput(name="Dados-A"))
+    create.execute(CreateSquadInput(name="Alfa"))
 
     with pytest.raises(DuplicateName):
-        create.execute(CreateSquadInput(name="Dados-A"))
+        create.execute(CreateSquadInput(name="Alfa"))
 
 
 def test_update_squad_can_drop_the_representative(world: World, fakes: Fakes) -> None:
-    bianca = world.member("Bianca")
-    squad = world.squad("Dados-A")
-    squad.set_representative(bianca.id)
+    ana = world.member("Ana")
+    squad = world.squad("Alfa")
+    squad.set_representative(ana.id)
     fakes.squads.update(squad)
 
     view = fakes.use_case(UpdateSquad).execute(
@@ -96,7 +96,7 @@ def test_update_squad_can_drop_the_representative(world: World, fakes: Fakes) ->
 
 
 def test_deactivate_squad_keeps_the_row(world: World, fakes: Fakes) -> None:
-    squad = world.squad("Dados-A")
+    squad = world.squad("Alfa")
 
     view = fakes.use_case(DeactivateSquad).execute(squad.id)
 
@@ -108,29 +108,27 @@ def test_deactivate_squad_keeps_the_row(world: World, fakes: Fakes) -> None:
 
 def test_set_memberships_replaces_the_range(world: World, fakes: Fakes) -> None:
     world.sprints(18, 22)
-    squad = world.squad("Dados-A")
-    bianca = world.member("Bianca")
-    gabriel = world.member("Gabriel")
+    squad = world.squad("Alfa")
+    ana = world.member("Ana")
+    bruno = world.member("Bruno")
     set_memberships = fakes.use_case(SetSquadMemberships)
 
-    set_memberships.execute(
-        squad.id, SetMembershipsInput(18, 20, (bianca.id, gabriel.id))
-    )
+    set_memberships.execute(squad.id, SetMembershipsInput(18, 20, (ana.id, bruno.id)))
     composition = set_memberships.execute(
-        squad.id, SetMembershipsInput(19, 19, (bianca.id,))
+        squad.id, SetMembershipsInput(19, 19, (ana.id,))
     )
 
     assert [view.sprint_number for view in composition] == [19]
-    assert [member.short_name for member in composition[0].members] == ["Bianca"]
+    assert [member.short_name for member in composition[0].members] == ["Ana"]
 
     whole = fakes.use_case(ListSquadMemberships).execute(squad.id)
     assert {
         view.sprint_number: [member.short_name for member in view.members]
         for view in whole
     } == {
-        18: ["Bianca", "Gabriel"],
-        19: ["Bianca"],
-        20: ["Bianca", "Gabriel"],
+        18: ["Ana", "Bruno"],
+        19: ["Ana"],
+        20: ["Ana", "Bruno"],
         21: [],
         22: [],
     }
@@ -141,28 +139,28 @@ def test_set_memberships_with_an_empty_list_empties_the_range(
 ) -> None:
     """Squad vazia com alocação é `EMPTY_SQUAD`, informativo, nunca bloqueio."""
     world.sprints(18, 19)
-    squad = world.squad("Dados-A")
-    bianca = world.member("Bianca")
+    squad = world.squad("Alfa")
+    ana = world.member("Ana")
     set_memberships = fakes.use_case(SetSquadMemberships)
-    set_memberships.execute(squad.id, SetMembershipsInput(18, 19, (bianca.id,)))
+    set_memberships.execute(squad.id, SetMembershipsInput(18, 19, (ana.id,)))
 
     composition = set_memberships.execute(squad.id, SetMembershipsInput(18, 19, ()))
 
     assert [view.members for view in composition] == [(), ()]
 
 
-def test_the_emilie_case_does_not_leak_between_squads(
+def test_the_carla_case_does_not_leak_between_squads(
     world: World, fakes: Fakes
 ) -> None:
-    """Emilie no BNPL nas 18-19 e no CRM da 20 em diante (§6.5)."""
+    """Carla no Boreal nas 18-19 e no Aurora da 20 em diante (§6.5)."""
     world.sprints(18, 22)
-    bnpl = world.squad("BNPL")
-    crm = world.squad("CRM")
-    emilie = world.member("Emilie")
+    boreal = world.squad("Boreal")
+    aurora = world.squad("Aurora")
+    carla = world.member("Carla")
     set_memberships = fakes.use_case(SetSquadMemberships)
 
-    set_memberships.execute(bnpl.id, SetMembershipsInput(18, 19, (emilie.id,)))
-    set_memberships.execute(crm.id, SetMembershipsInput(20, 22, (emilie.id,)))
+    set_memberships.execute(boreal.id, SetMembershipsInput(18, 19, (carla.id,)))
+    set_memberships.execute(aurora.id, SetMembershipsInput(20, 22, (carla.id,)))
 
     def sprints_of(squad_id: UUID) -> list[int]:
         return [
@@ -171,13 +169,13 @@ def test_the_emilie_case_does_not_leak_between_squads(
             if view.members
         ]
 
-    assert sprints_of(bnpl.id) == [18, 19]
-    assert sprints_of(crm.id) == [20, 21, 22]
+    assert sprints_of(boreal.id) == [18, 19]
+    assert sprints_of(aurora.id) == [20, 21, 22]
 
 
 def test_set_memberships_requires_existing_members(world: World, fakes: Fakes) -> None:
     world.sprints(18, 18)
-    squad = world.squad("Dados-A")
+    squad = world.squad("Alfa")
 
     with pytest.raises(MemberNotFound):
         fakes.use_case(SetSquadMemberships).execute(
@@ -190,12 +188,12 @@ def test_set_memberships_requires_the_whole_sprint_range_to_exist(
 ) -> None:
     """Diferente da alocação (RN5): composição não aceita intervalo parcial."""
     world.sprints(18, 19)
-    squad = world.squad("Dados-A")
-    bianca = world.member("Bianca")
+    squad = world.squad("Alfa")
+    ana = world.member("Ana")
 
     with pytest.raises(SprintNotFound):
         fakes.use_case(SetSquadMemberships).execute(
-            squad.id, SetMembershipsInput(18, 21, (bianca.id,))
+            squad.id, SetMembershipsInput(18, 21, (ana.id,))
         )
 
 
@@ -203,21 +201,21 @@ def test_remove_memberships_takes_out_only_who_was_asked(
     world: World, fakes: Fakes
 ) -> None:
     world.sprints(18, 20)
-    squad = world.squad("Dados-A")
-    bianca = world.member("Bianca")
-    gabriel = world.member("Gabriel")
+    squad = world.squad("Alfa")
+    ana = world.member("Ana")
+    bruno = world.member("Bruno")
     fakes.use_case(SetSquadMemberships).execute(
-        squad.id, SetMembershipsInput(18, 20, (bianca.id, gabriel.id))
+        squad.id, SetMembershipsInput(18, 20, (ana.id, bruno.id))
     )
 
     composition = fakes.use_case(RemoveSquadMemberships).execute(
-        squad.id, RemoveMembershipsInput(19, 20, (gabriel.id,))
+        squad.id, RemoveMembershipsInput(19, 20, (bruno.id,))
     )
 
     assert {
         view.sprint_number: [member.short_name for member in view.members]
         for view in composition
-    } == {19: ["Bianca"], 20: ["Bianca"]}
+    } == {19: ["Ana"], 20: ["Ana"]}
     assert len(fakes.memberships.list_all(squad_id=squad.id)) == 4
 
 
@@ -225,10 +223,10 @@ def test_remove_memberships_without_ids_empties_the_range(
     world: World, fakes: Fakes
 ) -> None:
     world.sprints(18, 20)
-    squad = world.squad("Dados-A")
-    bianca = world.member("Bianca")
+    squad = world.squad("Alfa")
+    ana = world.member("Ana")
     fakes.use_case(SetSquadMemberships).execute(
-        squad.id, SetMembershipsInput(18, 20, (bianca.id,))
+        squad.id, SetMembershipsInput(18, 20, (ana.id,))
     )
 
     fakes.use_case(RemoveSquadMemberships).execute(
@@ -246,24 +244,24 @@ def test_get_squad_shows_only_the_sprints_with_people(
     world: World, fakes: Fakes
 ) -> None:
     world.sprints(18, 22)
-    squad = world.squad("Dados-A")
-    bianca = world.member("Bianca")
-    world.join(squad, bianca, 19, 20)
+    squad = world.squad("Alfa")
+    ana = world.member("Ana")
+    world.join(squad, ana, 19, 20)
 
     view = fakes.use_case(GetSquad).execute(squad.id)
 
     assert [item.sprint_number for item in view.memberships] == [19, 20]
-    assert view.squad.name == "Dados-A"
+    assert view.squad.name == "Alfa"
 
 
 def test_list_squads_expands_the_composition_of_the_asked_sprint(
     world: World, fakes: Fakes
 ) -> None:
     world.sprints(18, 20)
-    dados_a = world.squad("Dados-A")
-    world.squad("Dados-B")
-    bianca = world.member("Bianca")
-    world.join(dados_a, bianca, 19)
+    alfa = world.squad("Alfa")
+    world.squad("Beta")
+    ana = world.member("Ana")
+    world.join(alfa, ana, 19)
 
     without = fakes.use_case(ListSquads).execute()
     assert [view.members for view in without] == [(), ()]
@@ -272,13 +270,13 @@ def test_list_squads_expands_the_composition_of_the_asked_sprint(
     assert {
         view.name: [member.short_name for member in view.members]
         for view in with_sprint
-    } == {"Dados-A": ["Bianca"], "Dados-B": []}
+    } == {"Alfa": ["Ana"], "Beta": []}
     assert {view.sprint_number for view in with_sprint} == {19}
 
 
 def test_list_squads_reports_an_unknown_sprint(world: World, fakes: Fakes) -> None:
     world.sprints(18, 18)
-    world.squad("Dados-A")
+    world.squad("Alfa")
 
     with pytest.raises(SprintNotFound):
         fakes.use_case(ListSquads).execute(sprint_number=99)

@@ -70,7 +70,7 @@ def test_the_accents_are_not_escaped(
 
     text = (directory / "initiatives.json").read_text(encoding="utf-8")
 
-    assert "Reestruturação V1" in text
+    assert "Catálogo V1" in text
     assert "\\u" not in text
 
 

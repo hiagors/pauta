@@ -20,22 +20,20 @@ S = InitiativeStatus
 
 
 def make(clock: FrozenClock, status: InitiativeStatus = S.BACKLOG) -> Initiative:
-    initiative = Initiative.create(
-        project_id=uid(1), name="Reestruturação V1", clock=clock
-    )
+    initiative = Initiative.create(project_id=uid(1), name="Catálogo V1", clock=clock)
     initiative.status = status
     return initiative
 
 
 class TestCriacao:
     def test_nasce_em_backlog_com_prioridade_media(self, clock: FrozenClock) -> None:
-        initiative = Initiative.create(project_id=uid(1), name="CRM", clock=clock)
+        initiative = Initiative.create(project_id=uid(1), name="Aurora", clock=clock)
         assert initiative.status is S.BACKLOG
         assert initiative.priority is Priority.MEDIUM
 
     def test_entered_at_vem_do_clock_e_nao_do_relogio_do_sistema(self) -> None:
         clock = FrozenClock(date(2026, 1, 15))
-        initiative = Initiative.create(project_id=uid(1), name="CRM", clock=clock)
+        initiative = Initiative.create(project_id=uid(1), name="Aurora", clock=clock)
         assert initiative.entered_at == date(2026, 1, 15)
 
     def test_nome_e_obrigatorio(self, clock: FrozenClock) -> None:
@@ -44,7 +42,7 @@ class TestCriacao:
 
     def test_camada_vazia_vira_none(self, clock: FrozenClock) -> None:
         initiative = Initiative.create(
-            project_id=uid(1), name="CRM", clock=clock, layer="  "
+            project_id=uid(1), name="Aurora", clock=clock, layer="  "
         )
         assert initiative.layer is None
 
@@ -55,13 +53,13 @@ class TestCriacao:
         with pytest.raises(InvalidEstimate):
             Initiative.create(
                 project_id=uid(1),
-                name="CRM",
+                name="Aurora",
                 clock=clock,
                 estimated_sprints=estimate,
             )
 
     def test_estimativa_ausente_e_valida(self, clock: FrozenClock) -> None:
-        initiative = Initiative.create(project_id=uid(1), name="CRM", clock=clock)
+        initiative = Initiative.create(project_id=uid(1), name="Aurora", clock=clock)
         assert initiative.estimated_sprints is None
 
     def test_a_iniciativa_nao_tem_a_flag_de_reserva(self) -> None:
@@ -71,19 +69,19 @@ class TestCriacao:
 
 class TestPrimeiraIniciativaDoProjeto:
     def test_rn_i1_herda_o_nome_do_projeto(self, clock: FrozenClock) -> None:
-        project = Project.create(name="Dispatch Service")
+        project = Project.create(name="Serviço de Envio")
         initiative = Initiative.create_first_for_project(project, clock)
         assert initiative.project_id == project.id
-        assert initiative.name == "Dispatch Service"
+        assert initiative.name == "Serviço de Envio"
         assert initiative.priority is Priority.MEDIUM
         assert initiative.status is S.BACKLOG
 
     def test_o_nome_e_editavel_em_seguida(self, clock: FrozenClock) -> None:
-        project = Project.create(name="CRM")
+        project = Project.create(name="Aurora")
         initiative = Initiative.create_first_for_project(project, clock)
-        initiative.rename("Reestruturação V1")
-        assert initiative.name == "Reestruturação V1"
-        assert project.name == "CRM"
+        initiative.rename("Catálogo V1")
+        assert initiative.name == "Catálogo V1"
+        assert project.name == "Aurora"
 
 
 class TestRecalculateStatus:

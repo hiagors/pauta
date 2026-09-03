@@ -20,7 +20,7 @@ def test_an_active_member_with_no_front_is_reported_as_idle(api: Api) -> None:
     squad — uma squad sem alocação não é problema; uma pessoa sem frente é
     exatamente a pergunta de capacidade que interessa."""
     api.sprints()
-    api.member("Thalita")
+    api.member("Diana")
 
     idle = alerts_of(api.get("/alerts").json(), "MEMBER_IDLE")
 
@@ -31,37 +31,37 @@ def test_an_active_member_with_no_front_is_reported_as_idle(api: Api) -> None:
 def test_an_inactive_member_is_not_reported_as_idle(api: Api) -> None:
     """Premissa A3 do §16: os alertas ignoram inativos."""
     api.sprints()
-    thalita = api.member("Thalita")
-    api.delete(f"/members/{thalita['id']}")
+    diana = api.member("Diana")
+    api.delete(f"/members/{diana['id']}")
 
     assert alerts_of(api.get("/alerts").json(), "MEMBER_IDLE") == []
 
 
 def test_a_squad_allocated_without_anyone_in_it_is_reported(api: Api) -> None:
-    """Cenário F do §13.1: `Dados-C` alocada na 21 sem membership na 21."""
+    """Cenário F do §13.1: `Gama` alocada na 21 sem membership na 21."""
     api.sprints()
-    initiative = api.project("API PIX")["initiatives"][0]
-    squad = api.squad("Dados-C")
+    initiative = api.project("API de Cobrança")["initiatives"][0]
+    squad = api.squad("Gama")
     api.allocate(initiative["id"], 21, 21, squad_id=squad["id"])
 
     empty = alerts_of(api.get("/alerts").json(), "EMPTY_SQUAD")
 
     assert [alert["sprint_number"] for alert in empty] == [21]
-    assert {ref["name"] for ref in empty[0]["entity_refs"]} >= {"Dados-C"}
+    assert {ref["name"] for ref in empty[0]["entity_refs"]} >= {"Gama"}
 
 
 def test_a_member_in_two_squads_on_two_fronts_is_a_conflict(api: Api) -> None:
     """Cenário C do §13.1."""
     api.sprints()
-    crm = api.project("CRM")["initiatives"][0]
-    bnpl = api.project("BNPL")["initiatives"][0]
-    dados_a = api.squad("Dados-A")
-    dados_b = api.squad("Dados-B")
-    bianca = api.member("Bianca")
-    api.join(dados_a["id"], [bianca["id"]], 19, 19)
-    api.join(dados_b["id"], [bianca["id"]], 19, 19)
-    api.allocate(crm["id"], 19, 19, squad_id=dados_a["id"])
-    api.allocate(bnpl["id"], 19, 19, squad_id=dados_b["id"])
+    aurora = api.project("Aurora")["initiatives"][0]
+    boreal = api.project("Boreal")["initiatives"][0]
+    alfa = api.squad("Alfa")
+    beta = api.squad("Beta")
+    ana = api.member("Ana")
+    api.join(alfa["id"], [ana["id"]], 19, 19)
+    api.join(beta["id"], [ana["id"]], 19, 19)
+    api.allocate(aurora["id"], 19, 19, squad_id=alfa["id"])
+    api.allocate(boreal["id"], 19, 19, squad_id=beta["id"])
 
     conflicts = alerts_of(api.get("/alerts").json(), "MEMBER_CONFLICT")
 
@@ -70,25 +70,25 @@ def test_a_member_in_two_squads_on_two_fronts_is_a_conflict(api: Api) -> None:
 
 
 def test_a_handover_between_squads_is_not_a_conflict(api: Api) -> None:
-    """Cenário D do §13.1: Emilie na `Dados-B` até a 19 e na `Dados-A` da 20 em
+    """Cenário D do §13.1: Carla na `Beta` até a 19 e na `Alfa` da 20 em
     diante. Passagem de bastão não é conflito em sprint nenhuma."""
     api.sprints()
-    crm = api.project("CRM")["initiatives"][0]
-    bnpl = api.project("BNPL")["initiatives"][0]
-    dados_a = api.squad("Dados-A")
-    dados_b = api.squad("Dados-B")
-    emilie = api.member("Emilie")
-    api.join(dados_b["id"], [emilie["id"]], 18, 19)
-    api.join(dados_a["id"], [emilie["id"]], 20, 22)
-    api.allocate(bnpl["id"], 18, 19, squad_id=dados_b["id"])
-    api.allocate(crm["id"], 20, 22, squad_id=dados_a["id"])
+    aurora = api.project("Aurora")["initiatives"][0]
+    boreal = api.project("Boreal")["initiatives"][0]
+    alfa = api.squad("Alfa")
+    beta = api.squad("Beta")
+    carla = api.member("Carla")
+    api.join(beta["id"], [carla["id"]], 18, 19)
+    api.join(alfa["id"], [carla["id"]], 20, 22)
+    api.allocate(boreal["id"], 18, 19, squad_id=beta["id"])
+    api.allocate(aurora["id"], 20, 22, squad_id=alfa["id"])
 
     assert alerts_of(api.get("/alerts").json(), "MEMBER_CONFLICT") == []
 
 
 def test_the_window_narrows_by_interval(api: Api) -> None:
     api.sprints()
-    api.member("Thalita")
+    api.member("Diana")
 
     narrowed = api.get("/alerts", params={"sprint_from": 20, "sprint_to": 21}).json()
 
@@ -101,7 +101,7 @@ def test_muting_takes_the_alert_out_of_the_list_but_keeps_it_counted(
     """§7.3: o painel mostra os não silenciados e guarda os outros atrás de um
     contador expansível."""
     api.sprints()
-    api.member("Thalita")
+    api.member("Diana")
     target = api.get("/alerts").json()["items"][0]
 
     mute = api.created(
@@ -109,12 +109,12 @@ def test_muting_takes_the_alert_out_of_the_list_but_keeps_it_counted(
         {
             "fingerprint": target["fingerprint"],
             "alert_type": target["type"],
-            "reason": "Thalita está em treinamento nesta sprint",
+            "reason": "Diana está em treinamento nesta sprint",
         },
     )
     after = api.get("/alerts").json()
 
-    assert mute["reason"] == "Thalita está em treinamento nesta sprint"
+    assert mute["reason"] == "Diana está em treinamento nesta sprint"
     assert after["muted_count"] == 1
     assert target["fingerprint"] not in {
         alert["fingerprint"] for alert in after["items"]
@@ -124,7 +124,7 @@ def test_muting_takes_the_alert_out_of_the_list_but_keeps_it_counted(
 def test_include_muted_brings_it_back_marked(api: Api) -> None:
     """Com `is_muted: true` e o `mute_id`, que é o que o botão "Reativar" usa."""
     api.sprints()
-    api.member("Thalita")
+    api.member("Diana")
     target = api.get("/alerts").json()["items"][0]
     mute = api.created(
         "/alerts/mute",
@@ -149,7 +149,7 @@ def test_include_muted_brings_it_back_marked(api: Api) -> None:
 
 def test_muting_the_same_fingerprint_twice_is_409(api: Api) -> None:
     api.sprints()
-    api.member("Thalita")
+    api.member("Diana")
     target = api.get("/alerts").json()["items"][0]
     body = {
         "fingerprint": target["fingerprint"],
@@ -167,7 +167,7 @@ def test_muting_the_same_fingerprint_twice_is_409(api: Api) -> None:
 def test_muting_without_a_reason_is_422(api: Api) -> None:
     """§7.3: silenciar exige motivo em texto."""
     api.sprints()
-    api.member("Thalita")
+    api.member("Diana")
     target = api.get("/alerts").json()["items"][0]
 
     response = api.post(
@@ -185,7 +185,7 @@ def test_muting_without_a_reason_is_422(api: Api) -> None:
 
 def test_reactivating_puts_the_alert_back(api: Api) -> None:
     api.sprints()
-    api.member("Thalita")
+    api.member("Diana")
     target = api.get("/alerts").json()["items"][0]
     mute = api.created(
         "/alerts/mute",
@@ -207,14 +207,14 @@ def test_a_third_front_does_not_undo_the_mute(api: Api) -> None:
     nunca nas iniciativas — senão alocar uma terceira frente ressuscitaria o
     alerta que já foi respondido."""
     api.sprints()
-    crm = api.project("CRM")["initiatives"][0]
-    bnpl = api.project("BNPL")["initiatives"][0]
-    pix = api.project("API PIX")["initiatives"][0]
-    dados_a = api.squad("Dados-A")
-    bianca = api.member("Bianca")
-    api.join(dados_a["id"], [bianca["id"]], 19, 19)
-    api.allocate(crm["id"], 19, 19, squad_id=dados_a["id"])
-    api.allocate(bnpl["id"], 19, 19, squad_id=dados_a["id"])
+    aurora = api.project("Aurora")["initiatives"][0]
+    boreal = api.project("Boreal")["initiatives"][0]
+    cobranca = api.project("API de Cobrança")["initiatives"][0]
+    alfa = api.squad("Alfa")
+    ana = api.member("Ana")
+    api.join(alfa["id"], [ana["id"]], 19, 19)
+    api.allocate(aurora["id"], 19, 19, squad_id=alfa["id"])
+    api.allocate(boreal["id"], 19, 19, squad_id=alfa["id"])
     overloaded = alerts_of(api.get("/alerts").json(), "SQUAD_OVERLOADED")[0]
     api.created(
         "/alerts/mute",
@@ -225,7 +225,7 @@ def test_a_third_front_does_not_undo_the_mute(api: Api) -> None:
         },
     )
 
-    result = api.allocate(pix["id"], 19, 19, squad_id=dados_a["id"])
+    result = api.allocate(cobranca["id"], 19, 19, squad_id=alfa["id"])
 
     still_muted = [
         alert for alert in result["alerts"] if alert["type"] == "SQUAD_OVERLOADED"
@@ -242,6 +242,6 @@ def test_reactivating_an_unknown_mute_is_404(api: Api) -> None:
 
 
 def test_there_is_nothing_to_report_without_any_sprint(api: Api) -> None:
-    api.member("Thalita")
+    api.member("Diana")
 
     assert api.get("/alerts").json() == {"items": [], "muted_count": 0}

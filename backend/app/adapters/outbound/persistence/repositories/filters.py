@@ -8,8 +8,7 @@ Os fakes da Fase 2 fixaram o contrato; aqui ele é traduzido para SQL:
   `where`;
 - **`?q=` é pedaço do nome, sem diferenciar maiúscula.** Com `casefold()` dos
   dois lados, e não com o `lower()` nativo do SQLite, que só dobra ASCII e
-  faria "REESTRUTURAÇÃO" não achar "Reestruturação" (ver
-  `session._register_casefold`).
+  faria "CATÁLOGO" não achar "Catálogo" (ver `session._register_casefold`).
 """
 
 from collections.abc import Collection

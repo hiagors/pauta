@@ -18,8 +18,8 @@ biblioteca de prompts. Continuam como arquivos soltos.
 
 | Termo no sistema | O que é |
 |---|---|
-| **Projeto** | o agrupador maior: CRM, BNPL, API PIX, MICROCRÉDITO… Não é alocável por si só |
-| **Iniciativa** | a frente de trabalho de verdade, dentro de um projeto. É **ela** que ocupa sprints. Ex.: no CRM — "Reestruturação V1", "Dispatch Service", "Backlog V2" |
+| **Projeto** | o agrupador maior: Aurora, Boreal, API de Cobrança, MICROCRÉDITO… Não é alocável por si só |
+| **Iniciativa** | a frente de trabalho de verdade, dentro de um projeto. É **ela** que ocupa sprints. Ex.: no Aurora — "Catálogo V1", "Serviço de Envio", "Backlog V2" |
 | **Camada** | rótulo livre de uma iniciativa, quando faz sentido separar por área de atuação |
 | **Membro** | liderado do time |
 | **Squad** | agrupamento temporário de membros para atuarem juntos em uma frente |
@@ -40,9 +40,9 @@ enum.
 
 ### Por que projeto e iniciativa são coisas diferentes
 
-O CRM não é uma frente única. Hoje ele tem a reestruturação da V1 em andamento, o
-Dispatch Service (o serviço unificado de disparo de mensagens de recuperação) e um
-backlog para as versões seguintes ao lançamento da V1. São três frentes com
+O Aurora não é uma frente única. Hoje ele tem o Catálogo V1 em andamento, o
+Serviço de Envio (o serviço unificado de disparo de mensagens) e um backlog
+para as versões seguintes ao lançamento da V1. São três frentes com
 prioridades e cronogramas próprios, dentro do mesmo produto.
 
 Então:
@@ -91,7 +91,7 @@ sprint (veja §4).
 ### Alocação
 `iniciativa`, `sprint`, e **ou** uma `squad` **ou** um `membro`.
 
-Uma linha por sprint ocupada. A reestruturação do CRM indo da Sprint 18 à 22 gera
+Uma linha por sprint ocupada. O Catálogo do Aurora indo da Sprint 18 à 22 gera
 cinco linhas. Isso deixa o Gantt trivial de renderizar e permite pausar uma
 iniciativa no meio sem gambiarra.
 
@@ -108,12 +108,12 @@ precisam de squad para fluir; trabalho pequeno não precisa.
 Mas quem está na squad **muda ao longo do tempo**, e o sistema precisa registrar isso
 por sprint. O caso real:
 
-> A Emilie está no BNPL até a Sprint 19. A partir da Sprint 20 ela vai para o CRM,
-> que já tem gente atuando desde o começo. A squad do CRM ganha um membro novo a
+> A Carla está no Boreal até a Sprint 19. A partir da Sprint 20 ela vai para o Aurora,
+> que já tem gente atuando desde o começo. A squad do Aurora ganha um membro novo a
 > partir da 20.
 
-Isso **não** é um conflito. Na Sprint 19 a Emilie está no BNPL; na Sprint 20 está no
-CRM. O sistema tem que distinguir as duas situações pela sprint, não por uma lista
+Isso **não** é um conflito. Na Sprint 19 a Carla está no Boreal; na Sprint 20 está no
+Aurora. O sistema tem que distinguir as duas situações pela sprint, não por uma lista
 estática de membros.
 
 A regra dura: **um membro nunca está em duas squads na mesma sprint.** Se estiver, é
@@ -185,7 +185,7 @@ permitida (planejar antes de contratar), mas o sistema sinaliza.
 
 ### RF4 — Compor squads por sprint
 Definir quem está em qual squad em qual sprint, aceitando períodos parciais. É aqui
-que o caso da Emilie se resolve, e é aqui que o conflito fica visível antes de virar
+que o caso da Carla se resolve, e é aqui que o conflito fica visível antes de virar
 alerta.
 
 ### RF5 — Cadastrar sprints
@@ -228,15 +228,15 @@ Em ambas, filtro por squad e por sprint, persistido na URL.
 
 ---
 
-## 8. Reserva de capacidade (o caso SUS)
+## 8. Reserva de capacidade (o caso Plantão)
 
-O SUS é trabalho sob demanda: sustentação. Ele é cadastrado como um projeto normal,
+O Plantão é trabalho sob demanda: sustentação. Ele é cadastrado como um projeto normal,
 mas com a flag **reserva de capacidade** ligada.
 
 Um projeto com essa flag:
 
 - aparece na grade com tratamento visual distinto (faixa hachurada, não bloco sólido);
-- **não** trava a pessoa: quem está no SUS pode estar em outra frente na mesma sprint
+- **não** trava a pessoa: quem está no Plantão pode estar em outra frente na mesma sprint
   sem gerar sobrecarga nem conflito;
 - não conta para o alerta de squad sobrecarregada nem para o de conflito de membro;
 - não aparece no backlog nem soma nas contas de capacidade.
@@ -264,7 +264,7 @@ atenção.
 
 ### Silenciar
 
-O conflito conhecido e intencional (a Bianca em duas frentes) grita em toda sprint.
+O conflito conhecido e intencional (a Ana em duas frentes) grita em toda sprint.
 Sem silenciamento, o painel perde valor em uma semana.
 
 Silenciar exige um motivo em texto, é reversível, e o painel mostra os silenciados

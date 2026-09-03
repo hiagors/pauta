@@ -60,9 +60,9 @@ def test_the_export_hands_the_whole_database_to_the_writer(
     fakes: Fakes, world: World
 ) -> None:
     world.sprints(18, 19)
-    project = world.project("CRM")
-    initiative = world.initiative(project, "Reestruturação")
-    squad = world.squad("Dados-A")
+    project = world.project("Aurora")
+    initiative = world.initiative(project, "Catálogo")
+    squad = world.squad("Alfa")
     world.allocate(initiative, 18, 19, squad=squad)
     writer = RecordingWriter()
 
@@ -112,7 +112,7 @@ def test_the_import_replaces_what_was_there(fakes: Fakes, world: World) -> None:
     assert result.mode is SnapshotMode.REPLACE
     assert result.counts.projects == 2
     assert [project.name for project in fakes.projects.list_all()] == [
-        "CRM",
+        "Aurora",
         "Reserva de capacidade",
     ]
 
@@ -144,7 +144,7 @@ def test_importing_an_empty_snapshot_empties_the_database(
 ) -> None:
     """`replace` é `replace`: quem restaura um snapshot de banco vazio está
     pedindo um banco vazio (RNF4)."""
-    world.project("CRM")
+    world.project("Aurora")
 
     ImportSnapshot(store=fakes.store, reader=StubReader(SnapshotBundle())).execute(
         ImportSnapshotInput(path=SNAPSHOT_DIR)

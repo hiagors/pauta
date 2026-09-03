@@ -11,11 +11,11 @@ from tests.application.conftest import Fakes, World
 
 def test_the_backlog_is_by_status(world: World, fakes: Fakes) -> None:
     """`DEPRIORITIZED` não aparece aqui: é outro lugar (§8)."""
-    crm = world.project("CRM")
-    world.initiative(crm, "Fila")
-    world.initiative(crm, "Planejada", status=InitiativeStatus.PLANNED)
-    world.initiative(crm, "Despriorizada", status=InitiativeStatus.DEPRIORITIZED)
-    world.initiative(crm, "Cancelada", status=InitiativeStatus.CANCELLED)
+    aurora = world.project("Aurora")
+    world.initiative(aurora, "Fila")
+    world.initiative(aurora, "Planejada", status=InitiativeStatus.PLANNED)
+    world.initiative(aurora, "Despriorizada", status=InitiativeStatus.DEPRIORITIZED)
+    world.initiative(aurora, "Cancelada", status=InitiativeStatus.CANCELLED)
 
     view = fakes.use_case(GetBacklog).execute()
 
@@ -24,8 +24,8 @@ def test_the_backlog_is_by_status(world: World, fakes: Fakes) -> None:
 
 def test_capacity_reserve_projects_stay_out(world: World, fakes: Fakes) -> None:
     """Sustentação sob demanda não é fila de trabalho (§3)."""
-    world.initiative(world.project("CRM"), "Fila")
-    world.initiative(world.project("SUS", reserve=True), "Sustentação")
+    world.initiative(world.project("Aurora"), "Fila")
+    world.initiative(world.project("Plantão", reserve=True), "Sustentação")
 
     view = fakes.use_case(GetBacklog).execute()
 
@@ -36,10 +36,10 @@ def test_capacity_reserve_projects_stay_out(world: World, fakes: Fakes) -> None:
 def test_the_summary_counts_only_who_has_an_estimate(
     world: World, fakes: Fakes
 ) -> None:
-    crm = world.project("CRM")
-    world.initiative(crm, "A", estimated_sprints=5)
-    world.initiative(crm, "B", estimated_sprints=2)
-    world.initiative(crm, "C")
+    aurora = world.project("Aurora")
+    world.initiative(aurora, "A", estimated_sprints=5)
+    world.initiative(aurora, "B", estimated_sprints=2)
+    world.initiative(aurora, "C")
 
     view = fakes.use_case(GetBacklog).execute()
 
@@ -49,10 +49,10 @@ def test_the_summary_counts_only_who_has_an_estimate(
 
 
 def test_ordering_by_priority_is_the_default(world: World, fakes: Fakes) -> None:
-    crm = world.project("CRM")
-    world.initiative(crm, "Baixa", priority=Priority.LOW)
-    world.initiative(crm, "Alta", priority=Priority.HIGH)
-    world.initiative(crm, "Média", priority=Priority.MEDIUM)
+    aurora = world.project("Aurora")
+    world.initiative(aurora, "Baixa", priority=Priority.LOW)
+    world.initiative(aurora, "Alta", priority=Priority.HIGH)
+    world.initiative(aurora, "Média", priority=Priority.MEDIUM)
 
     view = fakes.use_case(GetBacklog).execute()
 
@@ -67,10 +67,10 @@ def test_ordering_by_size_keeps_the_unknown_last_in_both_directions(
     "Sem estimativa" não é "estimativa zero": inverter a ordem não pode
     promover o desconhecido ao topo da fila.
     """
-    crm = world.project("CRM")
-    world.initiative(crm, "Grande", estimated_sprints=8)
-    world.initiative(crm, "Pequena", estimated_sprints=1)
-    world.initiative(crm, "Sem tamanho")
+    aurora = world.project("Aurora")
+    world.initiative(aurora, "Grande", estimated_sprints=8)
+    world.initiative(aurora, "Pequena", estimated_sprints=1)
+    world.initiative(aurora, "Sem tamanho")
 
     ascending = fakes.use_case(GetBacklog).execute(
         BacklogQuery(order_by=BacklogOrder.SIZE)
@@ -92,11 +92,11 @@ def test_ordering_by_size_keeps_the_unknown_last_in_both_directions(
 
 
 def test_ordering_by_entered_at(world: World, fakes: Fakes) -> None:
-    crm = world.project("CRM")
-    old = world.initiative(crm, "Antiga")
+    aurora = world.project("Aurora")
+    old = world.initiative(aurora, "Antiga")
     old.entered_at = date(2026, 1, 5)
     fakes.initiatives.update(old)
-    world.initiative(crm, "Nova")
+    world.initiative(aurora, "Nova")
 
     view = fakes.use_case(GetBacklog).execute(
         BacklogQuery(order_by=BacklogOrder.ENTERED_AT)
@@ -108,12 +108,12 @@ def test_ordering_by_entered_at(world: World, fakes: Fakes) -> None:
 def test_the_item_carries_the_project_with_the_color_resolved(
     world: World, fakes: Fakes
 ) -> None:
-    crm = world.project("CRM", color="#0052cc")
-    world.initiative(crm, "Fila")
+    aurora = world.project("Aurora", color="#0052cc")
+    world.initiative(aurora, "Fila")
 
     view = fakes.use_case(GetBacklog).execute()
 
-    assert view.items[0].project.name == "CRM"
+    assert view.items[0].project.name == "Aurora"
     assert view.items[0].project.color == "#0052CC"
 
 

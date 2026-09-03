@@ -39,7 +39,7 @@ def test_the_export_writes_the_files_of_the_spec_and_returns_the_paths(
     api: Api,
 ) -> None:
     api.sprints(18, 19)
-    api.project("CRM")
+    api.project("Aurora")
 
     response = api.post("/snapshots/export")
 
@@ -90,7 +90,7 @@ def test_the_import_replaces_the_database(
     assert response.status_code == 200
     assert response.json()["counts"]["allocations"] == 3
     assert [project["name"] for project in api.get("/projects").json()] == [
-        "CRM",
+        "Aurora",
         "Reserva de capacidade",
     ]
 
@@ -171,7 +171,7 @@ def test_a_failed_import_leaves_the_database_as_it_was(
 
 
 def test_a_successful_mutation_schedules_an_export(api: Api) -> None:
-    api.project("CRM")
+    api.project("Aurora")
 
     assert api.snapshot_scheduled
 
@@ -181,25 +181,25 @@ def test_the_scheduled_export_writes_the_snapshot_of_the_committed_data(
 ) -> None:
     """O export sai depois do `commit`, e é por isso que ele vê a mutação que
     o disparou (ver o topo de `deps.py`)."""
-    api.project("CRM")
+    api.project("Aurora")
 
     api.flush_snapshot()
 
-    assert "CRM" in (api.snapshot_dir / "projects.json").read_text(encoding="utf-8")
+    assert "Aurora" in (api.snapshot_dir / "projects.json").read_text(encoding="utf-8")
 
 
 def test_a_sequence_of_mutations_collapses_into_one_export(api: Api) -> None:
     """RNF3: o debounce coalesce a edição em sequência, e o export que sai é o
     do estado final."""
-    api.project("CRM")
-    api.project("BNPL")
+    api.project("Aurora")
+    api.project("Boreal")
     api.sprints(18, 19)
 
     api.flush_snapshot()
 
     text = (api.snapshot_dir / "projects.json").read_text(encoding="utf-8")
-    assert "CRM" in text
-    assert "BNPL" in text
+    assert "Aurora" in text
+    assert "Boreal" in text
 
 
 def test_a_read_does_not_schedule_anything(api: Api) -> None:

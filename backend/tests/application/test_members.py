@@ -14,24 +14,24 @@ from tests.domain.conftest import uid
 
 def test_create_member(fakes: Fakes) -> None:
     view = fakes.use_case(CreateMember).execute(
-        CreateMemberInput(name="Bianca Souza", short_name="Bianca", role="Dados")
+        CreateMemberInput(name="Ana Martins", short_name="Ana", role="Dados")
     )
 
     assert view.is_active is True
-    assert view.short_name == "Bianca"
+    assert view.short_name == "Ana"
     assert fakes.members.get(view.id) is not None
 
 
 def test_create_member_requires_a_name(fakes: Fakes) -> None:
     with pytest.raises(InvalidName):
         fakes.use_case(CreateMember).execute(
-            CreateMemberInput(name="  ", short_name="Bianca")
+            CreateMemberInput(name="  ", short_name="Ana")
         )
 
 
 def test_deactivate_member_keeps_the_row(world: World, fakes: Fakes) -> None:
     """Soft delete: apagar reescreveria alocações passadas."""
-    member = world.member("Thalita")
+    member = world.member("Diana")
 
     view = fakes.use_case(DeactivateMember).execute(member.id)
 
@@ -47,7 +47,7 @@ def test_deactivate_member_reports_unknown_id(fakes: Fakes) -> None:
 
 
 def test_update_member_can_reactivate(world: World, fakes: Fakes) -> None:
-    member = world.member("Thalita", active=False)
+    member = world.member("Diana", active=False)
 
     view = fakes.use_case(UpdateMember).execute(
         member.id, UpdateMemberInput(is_active=True, role="Produto")
@@ -58,13 +58,13 @@ def test_update_member_can_reactivate(world: World, fakes: Fakes) -> None:
 
 
 def test_list_members_filters_by_active(world: World, fakes: Fakes) -> None:
-    world.member("Bianca")
+    world.member("Ana")
     world.member("Ana", active=False)
 
     assert [view.name for view in fakes.use_case(ListMembers).execute()] == [
         "Ana",
-        "Bianca",
+        "Ana",
     ]
     assert [view.name for view in fakes.use_case(ListMembers).execute(active=True)] == [
-        "Bianca"
+        "Ana"
     ]

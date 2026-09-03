@@ -19,17 +19,19 @@ from tests.domain.conftest import (
     uid,
 )
 
-DADOS_A, DADOS_B, DADOS_C = uid(1), uid(2), uid(3)
-BIANCA, EMILIE, GABRIEL, THALITA = uid(10), uid(11), uid(12), uid(13)
+ALFA, BETA, GAMA = uid(1), uid(2), uid(3)
+ANA, CARLA, BRUNO, DIANA = uid(10), uid(11), uid(12), uid(13)
 
-SQUADS = {DADOS_A: "Dados-A", DADOS_B: "Dados-B", DADOS_C: "Dados-C"}
+SQUADS = {ALFA: "Alfa", BETA: "Beta", GAMA: "Gama"}
 
-CRM_REEST = make_ref(50, "Reestruturação", project_seed=90, project_name="CRM")
-CRM_DISPATCH = make_ref(51, "Dispatch Service", project_seed=90, project_name="CRM")
-BNPL_OPEN = make_ref(52, "OpenFinance", project_seed=91, project_name="BNPL")
-BNPL_REEST = make_ref(54, "Reestruturação", project_seed=91, project_name="BNPL")
-PIX = make_ref(55, "API PIX", project_seed=93, project_name="Pagamentos")
-SUS = make_ref(53, "Sustentação", project_seed=92, project_name="SUS", reserve=True)
+AURORA_CATALOGO = make_ref(50, "Catálogo", project_seed=90, project_name="Aurora")
+AURORA_ENVIO = make_ref(51, "Serviço de Envio", project_seed=90, project_name="Aurora")
+BOREAL_PORTAL = make_ref(52, "Portal Externo", project_seed=91, project_name="Boreal")
+BOREAL_CATALOGO = make_ref(54, "Catálogo", project_seed=91, project_name="Boreal")
+COBRANCA = make_ref(55, "API de Cobrança", project_seed=93, project_name="Pagamentos")
+PLANTAO = make_ref(
+    53, "Sustentação", project_seed=92, project_name="Plantão", reserve=True
+)
 
 service = AlertService()
 
@@ -39,18 +41,18 @@ def of_type(alerts: list[Alert], alert_type: AlertType) -> list[Alert]:
 
 
 class TestCenarioA:
-    """Squad Dados-A em duas iniciativas na Sprint 19 -> SQUAD_OVERLOADED na 19."""
+    """Squad Alfa em duas iniciativas na Sprint 19 -> SQUAD_OVERLOADED na 19."""
 
     def snapshot(self) -> PlanningSnapshot:
         return PlanningSnapshot(
             sprint_numbers=(18, 19, 20),
             allocations=(
-                squad_alloc(19, CRM_REEST, DADOS_A),
-                squad_alloc(19, BNPL_OPEN, DADOS_A),
+                squad_alloc(19, AURORA_CATALOGO, ALFA),
+                squad_alloc(19, BOREAL_PORTAL, ALFA),
             ),
-            memberships=(membership(19, DADOS_A, BIANCA),),
-            squads={DADOS_A: "Dados-A"},
-            members={BIANCA: "Bianca"},
+            memberships=(membership(19, ALFA, ANA),),
+            squads={ALFA: "Alfa"},
+            members={ANA: "Ana"},
             current_sprint_number=18,
         )
 
@@ -69,8 +71,8 @@ class TestCenarioA:
             0
         ]
         assert alerta.message == (
-            "Squad Dados-A está em 2 iniciativas na Sprint 19: "
-            "BNPL / OpenFinance e CRM / Reestruturação."
+            "Squad Alfa está em 2 iniciativas na Sprint 19: "
+            "Aurora / Catálogo e Boreal / Portal Externo."
         )
 
     def test_entity_refs_sao_objetos_tipados(self) -> None:
@@ -78,7 +80,7 @@ class TestCenarioA:
             0
         ]
         assert alerta.entity_refs[0].type is EntityRefType.SQUAD
-        assert alerta.entity_refs[0].id == DADOS_A
+        assert alerta.entity_refs[0].id == ALFA
         tipos = {ref.type for ref in alerta.entity_refs}
         assert tipos == {
             EntityRefType.SQUAD,
@@ -91,7 +93,7 @@ class TestCenarioA:
             0
         ]
         assert alerta.fingerprint == alert_fingerprint(
-            AlertType.SQUAD_OVERLOADED, DADOS_A, 19
+            AlertType.SQUAD_OVERLOADED, ALFA, 19
         )
 
 
@@ -102,12 +104,12 @@ class TestCenarioB:
         snapshot = PlanningSnapshot(
             sprint_numbers=(19,),
             allocations=(
-                squad_alloc(19, CRM_REEST, DADOS_A),
-                squad_alloc(19, SUS, DADOS_A),
+                squad_alloc(19, AURORA_CATALOGO, ALFA),
+                squad_alloc(19, PLANTAO, ALFA),
             ),
-            memberships=(membership(19, DADOS_A, BIANCA),),
-            squads={DADOS_A: "Dados-A"},
-            members={BIANCA: "Bianca"},
+            memberships=(membership(19, ALFA, ANA),),
+            squads={ALFA: "Alfa"},
+            members={ANA: "Ana"},
             current_sprint_number=19,
         )
         alerts = service.evaluate(snapshot)
@@ -116,21 +118,21 @@ class TestCenarioB:
 
 
 class TestCenarioC:
-    """Bianca em Dados-A e Dados-B na 19 -> MEMBER_CONFLICT na 19."""
+    """Ana em Alfa e Beta na 19 -> MEMBER_CONFLICT na 19."""
 
     def snapshot(self) -> PlanningSnapshot:
         return PlanningSnapshot(
             sprint_numbers=(19,),
             allocations=(
-                squad_alloc(19, BNPL_REEST, DADOS_A),
-                squad_alloc(19, CRM_DISPATCH, DADOS_B),
+                squad_alloc(19, BOREAL_CATALOGO, ALFA),
+                squad_alloc(19, AURORA_ENVIO, BETA),
             ),
             memberships=(
-                membership(19, DADOS_A, BIANCA),
-                membership(19, DADOS_B, BIANCA),
+                membership(19, ALFA, ANA),
+                membership(19, BETA, ANA),
             ),
             squads=SQUADS,
-            members={BIANCA: "Bianca"},
+            members={ANA: "Ana"},
             current_sprint_number=19,
         )
 
@@ -144,17 +146,17 @@ class TestCenarioC:
             0
         ]
         assert alerta.message == (
-            "Bianca está nas squads Dados-A e Dados-B, alocadas na Sprint 19 "
-            "em BNPL / Reestruturação e CRM / Dispatch Service."
+            "Ana está nas squads Alfa e Beta, alocadas na Sprint 19 "
+            "em Aurora / Serviço de Envio e Boreal / Catálogo."
         )
 
     def test_o_sujeito_do_fingerprint_e_o_membro(self) -> None:
         alerta = of_type(service.evaluate(self.snapshot()), AlertType.MEMBER_CONFLICT)[
             0
         ]
-        assert alerta.subject_id == BIANCA
+        assert alerta.subject_id == ANA
         assert alerta.fingerprint == alert_fingerprint(
-            AlertType.MEMBER_CONFLICT, BIANCA, 19
+            AlertType.MEMBER_CONFLICT, ANA, 19
         )
 
     def test_as_squads_envolvidas_aparecem_nas_refs(self) -> None:
@@ -164,47 +166,47 @@ class TestCenarioC:
         squads = [
             ref.name for ref in alerta.entity_refs if ref.type is EntityRefType.SQUAD
         ]
-        assert squads == ["Dados-A", "Dados-B"]
+        assert squads == ["Alfa", "Beta"]
 
     def test_alocacao_direta_junto_com_squad_tambem_e_conflito(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(19,),
             allocations=(
-                squad_alloc(19, BNPL_REEST, DADOS_A),
-                member_alloc(19, CRM_DISPATCH, BIANCA),
+                squad_alloc(19, BOREAL_CATALOGO, ALFA),
+                member_alloc(19, AURORA_ENVIO, ANA),
             ),
-            memberships=(membership(19, DADOS_A, BIANCA),),
+            memberships=(membership(19, ALFA, ANA),),
             squads=SQUADS,
-            members={BIANCA: "Bianca"},
+            members={ANA: "Ana"},
             current_sprint_number=19,
         )
         alerta = of_type(service.evaluate(snapshot), AlertType.MEMBER_CONFLICT)[0]
         assert alerta.message == (
-            "Bianca está em 2 iniciativas na Sprint 19: "
-            "BNPL / Reestruturação e CRM / Dispatch Service."
+            "Ana está em 2 iniciativas na Sprint 19: "
+            "Aurora / Serviço de Envio e Boreal / Catálogo."
         )
 
 
 class TestCenarioD:
-    """Emilie em Dados-B nas 18-19 e em Dados-A da 20 em diante -> nenhum alerta."""
+    """Carla em Beta nas 18-19 e em Alfa da 20 em diante -> nenhum alerta."""
 
     def test_composicao_por_sprint_nao_gera_conflito(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(18, 19, 20, 21),
             allocations=(
-                squad_alloc(18, BNPL_OPEN, DADOS_B),
-                squad_alloc(19, BNPL_OPEN, DADOS_B),
-                squad_alloc(20, CRM_REEST, DADOS_A),
-                squad_alloc(21, CRM_REEST, DADOS_A),
+                squad_alloc(18, BOREAL_PORTAL, BETA),
+                squad_alloc(19, BOREAL_PORTAL, BETA),
+                squad_alloc(20, AURORA_CATALOGO, ALFA),
+                squad_alloc(21, AURORA_CATALOGO, ALFA),
             ),
             memberships=(
-                membership(18, DADOS_B, EMILIE),
-                membership(19, DADOS_B, EMILIE),
-                membership(20, DADOS_A, EMILIE),
-                membership(21, DADOS_A, EMILIE),
+                membership(18, BETA, CARLA),
+                membership(19, BETA, CARLA),
+                membership(20, ALFA, CARLA),
+                membership(21, ALFA, CARLA),
             ),
             squads=SQUADS,
-            members={EMILIE: "Emilie"},
+            members={CARLA: "Carla"},
             current_sprint_number=18,
         )
         alerts = service.evaluate(snapshot)
@@ -215,31 +217,31 @@ class TestCenarioD:
 
 
 class TestCenarioE:
-    """Thalita ativa, sem nada na Sprint 20 (futura) -> MEMBER_IDLE na 20."""
+    """Diana ativa, sem nada na Sprint 20 (futura) -> MEMBER_IDLE na 20."""
 
     def snapshot(self) -> PlanningSnapshot:
         return PlanningSnapshot(
             sprint_numbers=(18, 19, 20),
             allocations=(
-                squad_alloc(18, CRM_REEST, DADOS_A),
-                squad_alloc(19, CRM_REEST, DADOS_A),
-                squad_alloc(20, CRM_REEST, DADOS_A),
+                squad_alloc(18, AURORA_CATALOGO, ALFA),
+                squad_alloc(19, AURORA_CATALOGO, ALFA),
+                squad_alloc(20, AURORA_CATALOGO, ALFA),
             ),
             memberships=(
-                membership(18, DADOS_A, BIANCA),
-                membership(19, DADOS_A, BIANCA),
-                membership(20, DADOS_A, BIANCA),
+                membership(18, ALFA, ANA),
+                membership(19, ALFA, ANA),
+                membership(20, ALFA, ANA),
             ),
-            squads={DADOS_A: "Dados-A"},
-            members={BIANCA: "Bianca", THALITA: "Thalita"},
+            squads={ALFA: "Alfa"},
+            members={ANA: "Ana", DIANA: "Diana"},
             current_sprint_number=19,
         )
 
     def test_dispara_da_sprint_atual_em_diante(self) -> None:
         alerts = of_type(service.evaluate(self.snapshot()), AlertType.MEMBER_IDLE)
         assert [(a.sprint_number, a.subject_id) for a in alerts] == [
-            (19, THALITA),
-            (20, THALITA),
+            (19, DIANA),
+            (20, DIANA),
         ]
 
     def test_nao_olha_para_o_passado(self) -> None:
@@ -250,32 +252,32 @@ class TestCenarioE:
     def test_severidade_e_info(self) -> None:
         alerta = of_type(service.evaluate(self.snapshot()), AlertType.MEMBER_IDLE)[0]
         assert alerta.severity is Severity.INFO
-        assert alerta.message == "Thalita não está em nenhuma frente na Sprint 19."
+        assert alerta.message == "Diana não está em nenhuma frente na Sprint 19."
 
     def test_quem_tem_frente_nao_aparece(self) -> None:
         alerts = of_type(service.evaluate(self.snapshot()), AlertType.MEMBER_IDLE)
-        assert BIANCA not in {alert.subject_id for alert in alerts}
+        assert ANA not in {alert.subject_id for alert in alerts}
 
     def test_membro_inativo_nao_aparece(self) -> None:
         """Premissa A3: inativo só desaparece."""
         snapshot = self.snapshot()
-        sem_thalita = PlanningSnapshot(
+        sem_diana = PlanningSnapshot(
             sprint_numbers=snapshot.sprint_numbers,
             allocations=snapshot.allocations,
             memberships=snapshot.memberships,
             squads=snapshot.squads,
-            members={BIANCA: "Bianca"},
+            members={ANA: "Ana"},
             current_sprint_number=19,
         )
-        assert of_type(service.evaluate(sem_thalita), AlertType.MEMBER_IDLE) == []
+        assert of_type(service.evaluate(sem_diana), AlertType.MEMBER_IDLE) == []
 
     def test_quem_esta_so_na_reserva_nao_e_ocioso(self) -> None:
         """§3 lista três efeitos da flag e MEMBER_IDLE não é um deles."""
         snapshot = PlanningSnapshot(
             sprint_numbers=(20,),
-            allocations=(member_alloc(20, SUS, THALITA),),
+            allocations=(member_alloc(20, PLANTAO, DIANA),),
             squads={},
-            members={THALITA: "Thalita"},
+            members={DIANA: "Diana"},
             current_sprint_number=20,
         )
         assert of_type(service.evaluate(snapshot), AlertType.MEMBER_IDLE) == []
@@ -283,7 +285,7 @@ class TestCenarioE:
     def test_sem_sprint_iniciada_toda_a_janela_e_futura(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(18, 19),
-            members={THALITA: "Thalita"},
+            members={DIANA: "Diana"},
             current_sprint_number=None,
         )
         alerts = of_type(service.evaluate(snapshot), AlertType.MEMBER_IDLE)
@@ -291,14 +293,14 @@ class TestCenarioE:
 
 
 class TestCenarioF:
-    """Dados-C alocada em API PIX na 21, sem composição na 21 -> EMPTY_SQUAD."""
+    """Gama alocada em API de Cobrança na 21, sem composição na 21 -> EMPTY_SQUAD."""
 
     def snapshot(self) -> PlanningSnapshot:
         return PlanningSnapshot(
             sprint_numbers=(20, 21),
-            allocations=(squad_alloc(21, PIX, DADOS_C),),
-            memberships=(membership(20, DADOS_C, GABRIEL),),
-            squads={DADOS_C: "Dados-C"},
+            allocations=(squad_alloc(21, COBRANCA, GAMA),),
+            memberships=(membership(20, GAMA, BRUNO),),
+            squads={GAMA: "Gama"},
             members={},
             current_sprint_number=20,
         )
@@ -311,17 +313,17 @@ class TestCenarioF:
     def test_a_mensagem_diz_onde_e_o_furo(self) -> None:
         alerta = of_type(service.evaluate(self.snapshot()), AlertType.EMPTY_SQUAD)[0]
         assert alerta.message == (
-            "Squad Dados-C está alocada em Pagamentos / API PIX na Sprint 21, "
+            "Squad Gama está alocada em Pagamentos / API de Cobrança na Sprint 21, "
             "mas não tem ninguém na composição dessa sprint."
         )
 
     def test_squad_com_composicao_nao_dispara(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(21,),
-            allocations=(squad_alloc(21, PIX, DADOS_C),),
-            memberships=(membership(21, DADOS_C, GABRIEL),),
-            squads={DADOS_C: "Dados-C"},
-            members={GABRIEL: "Gabriel"},
+            allocations=(squad_alloc(21, COBRANCA, GAMA),),
+            memberships=(membership(21, GAMA, BRUNO),),
+            squads={GAMA: "Gama"},
+            members={BRUNO: "Bruno"},
             current_sprint_number=21,
         )
         assert of_type(service.evaluate(snapshot), AlertType.EMPTY_SQUAD) == []
@@ -330,7 +332,7 @@ class TestCenarioF:
         """D16: squad sem frente não é problema; pessoa sem frente é."""
         snapshot = PlanningSnapshot(
             sprint_numbers=(21,),
-            squads={DADOS_C: "Dados-C"},
+            squads={GAMA: "Gama"},
             current_sprint_number=21,
         )
         assert of_type(service.evaluate(snapshot), AlertType.EMPTY_SQUAD) == []
@@ -338,40 +340,40 @@ class TestCenarioF:
     def test_alocacao_direta_a_membro_nao_dispara_empty_squad(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(21,),
-            allocations=(member_alloc(21, PIX, GABRIEL),),
-            squads={DADOS_C: "Dados-C"},
-            members={GABRIEL: "Gabriel"},
+            allocations=(member_alloc(21, COBRANCA, BRUNO),),
+            squads={GAMA: "Gama"},
+            members={BRUNO: "Bruno"},
             current_sprint_number=21,
         )
         assert of_type(service.evaluate(snapshot), AlertType.EMPTY_SQUAD) == []
 
 
 class TestCenarioG:
-    """Silenciar o conflito da Bianca e depois mexer nas iniciativas."""
+    """Silenciar o conflito da Ana e depois mexer nas iniciativas."""
 
     def snapshot(self, *, terceira: bool) -> PlanningSnapshot:
         allocations = [
-            squad_alloc(19, BNPL_REEST, DADOS_A),
-            squad_alloc(19, CRM_DISPATCH, DADOS_B),
+            squad_alloc(19, BOREAL_CATALOGO, ALFA),
+            squad_alloc(19, AURORA_ENVIO, BETA),
         ]
         if terceira:
-            allocations.append(squad_alloc(19, PIX, DADOS_A))
+            allocations.append(squad_alloc(19, COBRANCA, ALFA))
         return PlanningSnapshot(
             sprint_numbers=(19,),
             allocations=tuple(allocations),
             memberships=(
-                membership(19, DADOS_A, BIANCA),
-                membership(19, DADOS_B, BIANCA),
+                membership(19, ALFA, ANA),
+                membership(19, BETA, ANA),
             ),
             squads=SQUADS,
-            members={BIANCA: "Bianca"},
+            members={ANA: "Ana"},
             current_sprint_number=19,
         )
 
     def mute(self) -> MutedAlert:
         return MutedAlert.create(
             alert_type=AlertType.MEMBER_CONFLICT,
-            fingerprint=alert_fingerprint(AlertType.MEMBER_CONFLICT, BIANCA, 19),
+            fingerprint=alert_fingerprint(AlertType.MEMBER_CONFLICT, ANA, 19),
             reason="Conflito conhecido e intencional até o fim do trimestre.",
             clock=FrozenClock(datetime.now(UTC).date()),
         )
@@ -400,19 +402,19 @@ class TestCenarioG:
         snapshot = PlanningSnapshot(
             sprint_numbers=(19, 20),
             allocations=(
-                squad_alloc(19, BNPL_REEST, DADOS_A),
-                squad_alloc(19, CRM_DISPATCH, DADOS_B),
-                squad_alloc(20, BNPL_REEST, DADOS_A),
-                squad_alloc(20, CRM_DISPATCH, DADOS_B),
+                squad_alloc(19, BOREAL_CATALOGO, ALFA),
+                squad_alloc(19, AURORA_ENVIO, BETA),
+                squad_alloc(20, BOREAL_CATALOGO, ALFA),
+                squad_alloc(20, AURORA_ENVIO, BETA),
             ),
             memberships=(
-                membership(19, DADOS_A, BIANCA),
-                membership(19, DADOS_B, BIANCA),
-                membership(20, DADOS_A, BIANCA),
-                membership(20, DADOS_B, BIANCA),
+                membership(19, ALFA, ANA),
+                membership(19, BETA, ANA),
+                membership(20, ALFA, ANA),
+                membership(20, BETA, ANA),
             ),
             squads=SQUADS,
-            members={BIANCA: "Bianca"},
+            members={ANA: "Ana"},
             current_sprint_number=19,
         )
         alerts = of_type(
@@ -438,13 +440,13 @@ class TestOrdemESaida:
         snapshot = PlanningSnapshot(
             sprint_numbers=(19, 20),
             allocations=(
-                squad_alloc(19, CRM_REEST, DADOS_A),
-                squad_alloc(19, BNPL_OPEN, DADOS_A),
-                squad_alloc(20, PIX, DADOS_C),
+                squad_alloc(19, AURORA_CATALOGO, ALFA),
+                squad_alloc(19, BOREAL_PORTAL, ALFA),
+                squad_alloc(20, COBRANCA, GAMA),
             ),
-            memberships=(membership(19, DADOS_A, BIANCA),),
-            squads={DADOS_A: "Dados-A", DADOS_C: "Dados-C"},
-            members={BIANCA: "Bianca", THALITA: "Thalita"},
+            memberships=(membership(19, ALFA, ANA),),
+            squads={ALFA: "Alfa", GAMA: "Gama"},
+            members={ANA: "Ana", DIANA: "Diana"},
             current_sprint_number=19,
         )
         alerts = service.evaluate(snapshot)
@@ -460,16 +462,16 @@ class TestOrdemESaida:
     def test_e_deterministico_entre_execucoes(self) -> None:
         snapshot = PlanningSnapshot(
             sprint_numbers=(19,),
-            members={THALITA: "Thalita", BIANCA: "Bianca", GABRIEL: "Gabriel"},
+            members={DIANA: "Diana", ANA: "Ana", BRUNO: "Bruno"},
             current_sprint_number=19,
         )
         primeiro = [a.fingerprint for a in service.evaluate(snapshot)]
         segundo = [a.fingerprint for a in service.evaluate(snapshot)]
         assert primeiro == segundo
         assert [a.subject_id for a in service.evaluate(snapshot)] == [
-            BIANCA,
-            GABRIEL,
-            THALITA,
+            ANA,
+            BRUNO,
+            DIANA,
         ]
 
     def test_plano_vazio_nao_gera_alerta(self) -> None:
@@ -480,15 +482,15 @@ class TestOrdemESaida:
         snapshot = PlanningSnapshot(
             sprint_numbers=(19,),
             allocations=(
-                squad_alloc(19, CRM_REEST, DADOS_A),
-                squad_alloc(19, BNPL_OPEN, DADOS_A),
+                squad_alloc(19, AURORA_CATALOGO, ALFA),
+                squad_alloc(19, BOREAL_PORTAL, ALFA),
             ),
             memberships=(
-                membership(19, DADOS_A, BIANCA),
-                membership(19, DADOS_B, BIANCA),
+                membership(19, ALFA, ANA),
+                membership(19, BETA, ANA),
             ),
             squads=SQUADS,
-            members={BIANCA: "Bianca"},
+            members={ANA: "Ana"},
             current_sprint_number=19,
         )
         assert service.evaluate(snapshot)

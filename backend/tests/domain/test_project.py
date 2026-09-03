@@ -8,8 +8,8 @@ from app.domain.value_objects.color import DEFAULT_PROJECT_COLOR, Color
 
 
 def test_criacao_com_o_minimo() -> None:
-    project = Project.create(name="CRM")
-    assert project.name == "CRM"
+    project = Project.create(name="Aurora")
+    assert project.name == "Aurora"
     assert project.description == ""
     assert project.color is None
     assert project.is_capacity_reserve is False
@@ -22,20 +22,20 @@ def test_nome_e_obrigatorio() -> None:
 
 
 def test_nome_e_normalizado() -> None:
-    assert Project.create(name="  CRM  ").name == "CRM"
+    assert Project.create(name="  Aurora  ").name == "Aurora"
 
 
 def test_projeto_sem_cor_usa_a_cor_neutra_padrao() -> None:
-    assert Project.create(name="CRM").effective_color.value == DEFAULT_PROJECT_COLOR
+    assert Project.create(name="Aurora").effective_color.value == DEFAULT_PROJECT_COLOR
 
 
 def test_projeto_com_cor_usa_a_dele() -> None:
-    project = Project.create(name="CRM", color=Color("#0052CC"))
+    project = Project.create(name="Aurora", color=Color("#0052CC"))
     assert project.effective_color.value == "#0052CC"
 
 
 def test_reserva_de_capacidade_e_ligavel_e_desligavel() -> None:
-    project = Project.create(name="SUS", is_capacity_reserve=True)
+    project = Project.create(name="Plantão", is_capacity_reserve=True)
     assert project.is_capacity_reserve
     project.set_capacity_reserve(False)
     assert not project.is_capacity_reserve

@@ -6,10 +6,10 @@ from tests.http.conftest import Api
 
 
 def test_a_new_member_is_active(api: Api) -> None:
-    created = api.member("Bianca Souza", role="Analista de dados")
+    created = api.member("Ana Martins", role="Analista de dados")
 
-    assert created["name"] == "Bianca Souza"
-    assert created["short_name"] == "Bianca"
+    assert created["name"] == "Ana Martins"
+    assert created["short_name"] == "Ana"
     assert created["role"] == "Analista de dados"
     assert created["is_active"] is True
 
@@ -22,14 +22,14 @@ def test_a_member_without_a_name_is_422(api: Api) -> None:
 
 
 def test_the_active_filter_hides_the_inactive_ones(api: Api) -> None:
-    bianca = api.member("Bianca")
-    emilie = api.member("Emilie")
-    api.delete(f"/members/{emilie['id']}")
+    ana = api.member("Ana")
+    carla = api.member("Carla")
+    api.delete(f"/members/{carla['id']}")
 
     active = api.get("/members", params={"active": True}).json()
     everyone = api.get("/members").json()
 
-    assert [item["id"] for item in active] == [bianca["id"]]
+    assert [item["id"] for item in active] == [ana["id"]]
     assert len(everyone) == 2
 
 
@@ -39,7 +39,7 @@ def test_delete_is_a_soft_delete_and_returns_the_member(api: Api) -> None:
     A resposta é o membro inativado, e não 204, para a UI atualizar a linha
     sem recarregar a lista.
     """
-    member = api.member("Emilie")
+    member = api.member("Carla")
 
     response = api.delete(f"/members/{member['id']}")
 
@@ -48,7 +48,7 @@ def test_delete_is_a_soft_delete_and_returns_the_member(api: Api) -> None:
 
 
 def test_an_inactive_member_can_be_reactivated_by_patch(api: Api) -> None:
-    member = api.member("Emilie")
+    member = api.member("Carla")
     api.delete(f"/members/{member['id']}")
 
     updated = api.patch(f"/members/{member['id']}", json={"is_active": True}).json()
@@ -57,12 +57,14 @@ def test_an_inactive_member_can_be_reactivated_by_patch(api: Api) -> None:
 
 
 def test_a_patch_only_touches_what_it_carries(api: Api) -> None:
-    member = api.member("Bianca Souza", role="Analista")
+    member = api.member("Ana Martins", role="Analista")
 
-    updated = api.patch(f"/members/{member['id']}", json={"short_name": "Bia"}).json()
+    updated = api.patch(
+        f"/members/{member['id']}", json={"short_name": "Aninha"}
+    ).json()
 
-    assert updated["short_name"] == "Bia"
-    assert updated["name"] == "Bianca Souza"
+    assert updated["short_name"] == "Aninha"
+    assert updated["name"] == "Ana Martins"
     assert updated["role"] == "Analista"
 
 

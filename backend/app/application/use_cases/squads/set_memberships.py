@@ -6,8 +6,8 @@ intervalo passa a ser exatamente `member_ids`. Lista vazia esvazia o intervalo
 (RN-S2).
 
 Uma linha por (squad, membro, sprint), com unicidade `(squad_id, member_id,
-sprint_id)` (§6.5): é isso que faz a Emilie no BNPL até a 19 e no CRM da 20 em
-diante não ser conflito.
+sprint_id)` (§6.5): é isso que faz a Carla no Boreal até a 19 e no Aurora da
+20 em diante não ser conflito.
 """
 
 from dataclasses import dataclass

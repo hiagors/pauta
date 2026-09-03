@@ -25,16 +25,18 @@ from tests.domain.conftest import (
     uid,
 )
 
-DADOS_A = uid(1)
-DADOS_B = uid(2)
-BIANCA = uid(10)
-EMILIE = uid(11)
-GABRIEL = uid(12)
+ALFA = uid(1)
+BETA = uid(2)
+ANA = uid(10)
+CARLA = uid(11)
+BRUNO = uid(12)
 
-CRM = make_ref(50, "Reestruturação V1", project_seed=90, project_name="CRM")
-DISPATCH = make_ref(51, "Dispatch Service", project_seed=90, project_name="CRM")
-OPENFINANCE = make_ref(52, "OpenFinance", project_seed=91, project_name="BNPL")
-SUS = make_ref(53, "Sustentação", project_seed=92, project_name="SUS", reserve=True)
+AURORA = make_ref(50, "Catálogo V1", project_seed=90, project_name="Aurora")
+ENVIO = make_ref(51, "Serviço de Envio", project_seed=90, project_name="Aurora")
+PORTAL = make_ref(52, "Portal Externo", project_seed=91, project_name="Boreal")
+PLANTAO = make_ref(
+    53, "Sustentação", project_seed=92, project_name="Plantão", reserve=True
+)
 
 
 class TestSequenciaDeSprints:
@@ -188,9 +190,9 @@ class TestPlanoDeAlocacao:
 
     def test_intervalo_inteiro_livre(self) -> None:
         plano = rules.plan_allocation(
-            initiative_id=CRM.id,
+            initiative_id=AURORA.id,
             sprint_range=self.make_range(),
-            assignee=Assignee.for_squad(DADOS_A),
+            assignee=Assignee.for_squad(ALFA),
             existing_sprint_numbers={18, 19, 20, 21, 22},
             occupied={},
         )
@@ -199,9 +201,9 @@ class TestPlanoDeAlocacao:
         assert plano.missing_sprint_numbers == ()
 
     def test_rn1_alocar_e_idempotente(self) -> None:
-        squad = Assignee.for_squad(DADOS_A)
+        squad = Assignee.for_squad(ALFA)
         plano = rules.plan_allocation(
-            initiative_id=CRM.id,
+            initiative_id=AURORA.id,
             sprint_range=self.make_range(),
             assignee=squad,
             existing_sprint_numbers={18, 19, 20, 21, 22},
@@ -212,9 +214,9 @@ class TestPlanoDeAlocacao:
 
     def test_rn5_sprint_inexistente_nao_derruba_a_operacao(self) -> None:
         plano = rules.plan_allocation(
-            initiative_id=CRM.id,
+            initiative_id=AURORA.id,
             sprint_range=self.make_range(),
-            assignee=Assignee.for_squad(DADOS_A),
+            assignee=Assignee.for_squad(ALFA),
             existing_sprint_numbers={18, 19, 20},
             occupied={},
         )
@@ -224,25 +226,25 @@ class TestPlanoDeAlocacao:
     def test_rn8_outro_responsavel_na_mesma_celula_e_conflito(self) -> None:
         with pytest.raises(AllocationConflict) as excinfo:
             rules.plan_allocation(
-                initiative_id=CRM.id,
+                initiative_id=AURORA.id,
                 sprint_range=SprintRange(18, 20),
-                assignee=Assignee.for_squad(DADOS_A),
+                assignee=Assignee.for_squad(ALFA),
                 existing_sprint_numbers={18, 19, 20},
-                occupied={19: Assignee.for_squad(DADOS_B)},
+                occupied={19: Assignee.for_squad(BETA)},
             )
         detalhes = excinfo.value.details
         assert detalhes["sprint_number"] == 19
         assert detalhes["occupant_kind"] == "squad"
-        assert detalhes["occupant_id"] == str(DADOS_B)
+        assert detalhes["occupant_id"] == str(BETA)
 
     def test_membro_ocupando_a_celula_de_uma_squad_tambem_e_conflito(self) -> None:
         with pytest.raises(AllocationConflict) as excinfo:
             rules.plan_allocation(
-                initiative_id=CRM.id,
+                initiative_id=AURORA.id,
                 sprint_range=SprintRange(19, 19),
-                assignee=Assignee.for_squad(DADOS_A),
+                assignee=Assignee.for_squad(ALFA),
                 existing_sprint_numbers={19},
-                occupied={19: Assignee.for_member(GABRIEL)},
+                occupied={19: Assignee.for_member(BRUNO)},
             )
         assert excinfo.value.details["occupant_kind"] == "member"
 
@@ -252,44 +254,44 @@ class TestAlocacaoEfetiva:
         return rules.PlanningSnapshot(
             sprint_numbers=(18, 19, 20),
             allocations=(
-                squad_alloc(19, CRM, DADOS_A),
-                squad_alloc(19, OPENFINANCE, DADOS_B),
-                member_alloc(19, DISPATCH, GABRIEL),
-                squad_alloc(20, SUS, DADOS_A),
+                squad_alloc(19, AURORA, ALFA),
+                squad_alloc(19, PORTAL, BETA),
+                member_alloc(19, ENVIO, BRUNO),
+                squad_alloc(20, PLANTAO, ALFA),
             ),
             memberships=(
-                membership(19, DADOS_A, BIANCA),
-                membership(19, DADOS_B, BIANCA),
-                membership(19, DADOS_A, EMILIE),
-                membership(20, DADOS_A, EMILIE),
+                membership(19, ALFA, ANA),
+                membership(19, BETA, ANA),
+                membership(19, ALFA, CARLA),
+                membership(20, ALFA, CARLA),
             ),
-            squads={DADOS_A: "Dados-A", DADOS_B: "Dados-B"},
-            members={BIANCA: "Bianca", EMILIE: "Emilie", GABRIEL: "Gabriel"},
+            squads={ALFA: "Alfa", BETA: "Beta"},
+            members={ANA: "Ana", CARLA: "Carla", BRUNO: "Bruno"},
             current_sprint_number=19,
         )
 
     def test_uniao_de_direta_e_via_squad(self) -> None:
         efetivas = rules.effective_initiatives(
             self.snapshot(),
-            member_id=BIANCA,
+            member_id=ANA,
             sprint_number=19,
             include_capacity_reserve=False,
         )
-        assert {ref.id for ref in efetivas} == {CRM.id, OPENFINANCE.id}
+        assert {ref.id for ref in efetivas} == {AURORA.id, PORTAL.id}
 
     def test_alocacao_direta_conta(self) -> None:
         efetivas = rules.effective_initiatives(
             self.snapshot(),
-            member_id=GABRIEL,
+            member_id=BRUNO,
             sprint_number=19,
             include_capacity_reserve=False,
         )
-        assert [ref.id for ref in efetivas] == [DISPATCH.id]
+        assert [ref.id for ref in efetivas] == [ENVIO.id]
 
     def test_a_composicao_e_por_sprint_e_nao_vaza(self) -> None:
         efetivas = rules.effective_initiatives(
             self.snapshot(),
-            member_id=BIANCA,
+            member_id=ANA,
             sprint_number=18,
             include_capacity_reserve=False,
         )
@@ -299,49 +301,49 @@ class TestAlocacaoEfetiva:
         snapshot = self.snapshot()
         sem_reserva = rules.effective_initiatives(
             snapshot,
-            member_id=EMILIE,
+            member_id=CARLA,
             sprint_number=20,
             include_capacity_reserve=False,
         )
         com_reserva = rules.effective_initiatives(
             snapshot,
-            member_id=EMILIE,
+            member_id=CARLA,
             sprint_number=20,
             include_capacity_reserve=True,
         )
         assert sem_reserva == ()
-        assert [ref.id for ref in com_reserva] == [SUS.id]
+        assert [ref.id for ref in com_reserva] == [PLANTAO.id]
 
     def test_iniciativas_da_squad(self) -> None:
         iniciativas = rules.squad_initiatives(
             self.snapshot(),
-            squad_id=DADOS_A,
+            squad_id=ALFA,
             sprint_number=19,
             include_capacity_reserve=False,
         )
-        assert [ref.id for ref in iniciativas] == [CRM.id]
+        assert [ref.id for ref in iniciativas] == [AURORA.id]
 
     def test_a_saida_e_ordenada_e_sem_repeticao(self) -> None:
         snapshot = rules.PlanningSnapshot(
             sprint_numbers=(19,),
             allocations=(
-                squad_alloc(19, OPENFINANCE, DADOS_A),
-                squad_alloc(19, CRM, DADOS_B),
-                member_alloc(19, CRM, BIANCA),
+                squad_alloc(19, PORTAL, ALFA),
+                squad_alloc(19, AURORA, BETA),
+                member_alloc(19, AURORA, ANA),
             ),
             memberships=(
-                membership(19, DADOS_A, BIANCA),
-                membership(19, DADOS_B, BIANCA),
+                membership(19, ALFA, ANA),
+                membership(19, BETA, ANA),
             ),
-            squads={DADOS_A: "Dados-A", DADOS_B: "Dados-B"},
-            members={BIANCA: "Bianca"},
+            squads={ALFA: "Alfa", BETA: "Beta"},
+            members={ANA: "Ana"},
         )
         efetivas = rules.effective_initiatives(
-            snapshot, member_id=BIANCA, sprint_number=19, include_capacity_reserve=False
+            snapshot, member_id=ANA, sprint_number=19, include_capacity_reserve=False
         )
         assert [ref.label for ref in efetivas] == [
-            "BNPL / OpenFinance",
-            "CRM / Reestruturação V1",
+            "Aurora / Catálogo V1",
+            "Boreal / Portal Externo",
         ]
 
 

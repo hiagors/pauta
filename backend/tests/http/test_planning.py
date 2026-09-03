@@ -7,22 +7,22 @@ def test_the_grid_groups_the_rows_by_project(api: Api) -> None:
     """§8: é o agrupamento por projeto que faz a leitura vertical funcionar, e
     é o projeto que carrega a cor."""
     api.sprints()
-    crm = api.project("CRM", color="#0052CC")
-    squad = api.squad("Dados-A")
-    api.allocate(crm["initiatives"][0]["id"], 18, 19, squad_id=squad["id"])
+    aurora = api.project("Aurora", color="#0052CC")
+    squad = api.squad("Alfa")
+    api.allocate(aurora["initiatives"][0]["id"], 18, 19, squad_id=squad["id"])
 
     grid = api.get("/planning/grid", params={"sprint_from": 18, "sprint_to": 22}).json()
 
-    assert [group["project"]["name"] for group in grid["groups"]] == ["CRM"]
+    assert [group["project"]["name"] for group in grid["groups"]] == ["Aurora"]
     assert grid["groups"][0]["project"]["color"] == "#0052CC"
 
 
 def test_a_project_without_color_gets_the_default_one_resolved(api: Api) -> None:
     """A grade recebe a cor já resolvida; quem edita é que vê o campo nulo."""
     api.sprints()
-    crm = api.project("CRM")
-    squad = api.squad("Dados-A")
-    api.allocate(crm["initiatives"][0]["id"], 18, 18, squad_id=squad["id"])
+    aurora = api.project("Aurora")
+    squad = api.squad("Alfa")
+    api.allocate(aurora["initiatives"][0]["id"], 18, 18, squad_id=squad["id"])
 
     grid = api.get("/planning/grid").json()
 
@@ -32,9 +32,9 @@ def test_a_project_without_color_gets_the_default_one_resolved(api: Api) -> None
 def test_contiguous_sprints_of_one_assignee_become_a_single_bar(api: Api) -> None:
     """O front desenha barras, não células — é o que dá a cara de Gantt."""
     api.sprints()
-    crm = api.project("CRM")
-    squad = api.squad("Dados-A")
-    api.allocate(crm["initiatives"][0]["id"], 18, 20, squad_id=squad["id"])
+    aurora = api.project("Aurora")
+    squad = api.squad("Alfa")
+    api.allocate(aurora["initiatives"][0]["id"], 18, 20, squad_id=squad["id"])
 
     grid = api.get("/planning/grid", params={"sprint_from": 18, "sprint_to": 22}).json()
 
@@ -44,16 +44,16 @@ def test_contiguous_sprints_of_one_assignee_become_a_single_bar(api: Api) -> Non
     assert bars[0]["assignee"] == {
         "kind": "squad",
         "id": squad["id"],
-        "name": "Dados-A",
+        "name": "Alfa",
     }
     assert len(bars[0]["allocation_ids"]) == 3
 
 
 def test_a_pause_in_the_middle_generates_two_bars(api: Api) -> None:
     api.sprints()
-    crm = api.project("CRM")
-    squad = api.squad("Dados-A")
-    initiative = crm["initiatives"][0]["id"]
+    aurora = api.project("Aurora")
+    squad = api.squad("Alfa")
+    initiative = aurora["initiatives"][0]["id"]
     api.allocate(initiative, 18, 18, squad_id=squad["id"])
     api.allocate(initiative, 21, 22, squad_id=squad["id"])
 
@@ -86,19 +86,19 @@ def test_the_alerts_of_the_header_ignore_the_filters(api: Api) -> None:
     """§8: filtrar por uma squad não pode esconder o conflito da outra — o
     ícone da coluna reporta a sprint inteira."""
     api.sprints()
-    crm = api.project("CRM")["initiatives"][0]
-    bnpl = api.project("BNPL")["initiatives"][0]
-    dados_a = api.squad("Dados-A")
-    dados_b = api.squad("Dados-B")
-    bianca = api.member("Bianca")
-    api.join(dados_a["id"], [bianca["id"]], 18, 22)
-    api.join(dados_b["id"], [bianca["id"]], 18, 22)
-    api.allocate(crm["id"], 19, 19, squad_id=dados_a["id"])
-    api.allocate(bnpl["id"], 19, 19, squad_id=dados_b["id"])
+    aurora = api.project("Aurora")["initiatives"][0]
+    boreal = api.project("Boreal")["initiatives"][0]
+    alfa = api.squad("Alfa")
+    beta = api.squad("Beta")
+    ana = api.member("Ana")
+    api.join(alfa["id"], [ana["id"]], 18, 22)
+    api.join(beta["id"], [ana["id"]], 18, 22)
+    api.allocate(aurora["id"], 19, 19, squad_id=alfa["id"])
+    api.allocate(boreal["id"], 19, 19, squad_id=beta["id"])
 
     grid = api.get(
         "/planning/grid",
-        params={"sprint_from": 18, "sprint_to": 22, "squad_id": dados_a["id"]},
+        params={"sprint_from": 18, "sprint_to": 22, "squad_id": alfa["id"]},
     ).json()
 
     assert "MEMBER_CONFLICT" in grid["alerts_by_sprint"]["19"]
@@ -108,24 +108,28 @@ def test_the_alerts_of_the_header_ignore_the_filters(api: Api) -> None:
 
 def test_the_grid_filters_narrow_the_rows(api: Api) -> None:
     api.sprints()
-    crm = api.project("CRM")
-    bnpl = api.project("BNPL")
-    squad = api.squad("Dados-A")
-    api.allocate(crm["initiatives"][0]["id"], 18, 18, squad_id=squad["id"])
-    api.allocate(bnpl["initiatives"][0]["id"], 18, 18, squad_id=squad["id"])
+    aurora = api.project("Aurora")
+    boreal = api.project("Boreal")
+    squad = api.squad("Alfa")
+    api.allocate(aurora["initiatives"][0]["id"], 18, 18, squad_id=squad["id"])
+    api.allocate(boreal["initiatives"][0]["id"], 18, 18, squad_id=squad["id"])
 
     grid = api.get(
         "/planning/grid",
-        params={"sprint_from": 18, "sprint_to": 18, "project_id": crm["project"]["id"]},
+        params={
+            "sprint_from": 18,
+            "sprint_to": 18,
+            "project_id": aurora["project"]["id"],
+        },
     ).json()
 
-    assert [group["project"]["name"] for group in grid["groups"]] == ["CRM"]
+    assert [group["project"]["name"] for group in grid["groups"]] == ["Aurora"]
 
 
 def test_the_backlog_summarizes_what_is_estimated(api: Api) -> None:
     """§8: `estimated_sprints_total` soma só quem tem estimativa."""
-    project = api.project("CRM")["project"]
-    api.initiative(project["id"], "Reestruturação V1", estimated_sprints=3)
+    project = api.project("Aurora")["project"]
+    api.initiative(project["id"], "Catálogo V1", estimated_sprints=3)
     api.initiative(project["id"], "Descoberta", estimated_sprints=4)
 
     backlog = api.get("/planning/backlog").json()
@@ -138,19 +142,19 @@ def test_the_backlog_summarizes_what_is_estimated(api: Api) -> None:
 
 
 def test_the_backlog_excludes_capacity_reserve_projects(api: Api) -> None:
-    api.project("CRM")
+    api.project("Aurora")
     api.project("Férias", is_capacity_reserve=True)
 
     backlog = api.get("/planning/backlog").json()
 
-    assert [item["project"]["name"] for item in backlog["items"]] == ["CRM"]
+    assert [item["project"]["name"] for item in backlog["items"]] == ["Aurora"]
 
 
 def test_the_backlog_is_by_status_and_loses_what_gets_planned(api: Api) -> None:
     """RN2 + §8: alocar leva a `PLANNED`, e `PLANNED` não é backlog."""
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
-    squad = api.squad("Dados-A")
+    initiative = api.project("Aurora")["initiatives"][0]
+    squad = api.squad("Alfa")
 
     api.allocate(initiative["id"], 18, 18, squad_id=squad["id"])
 
@@ -160,8 +164,8 @@ def test_the_backlog_is_by_status_and_loses_what_gets_planned(api: Api) -> None:
 def test_a_deprioritized_initiative_does_not_show_up_in_the_backlog(api: Api) -> None:
     """§8: `DEPRIORITIZED` é filtro da tela de projetos, e não se mistura."""
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
-    squad = api.squad("Dados-A")
+    initiative = api.project("Aurora")["initiatives"][0]
+    squad = api.squad("Alfa")
     api.allocate(initiative["id"], 18, 18, squad_id=squad["id"])
     api.post(f"/initiatives/{initiative['id']}/status", json={"status": "IN_PROGRESS"})
     api.post(
@@ -172,19 +176,19 @@ def test_a_deprioritized_initiative_does_not_show_up_in_the_backlog(api: Api) ->
 
 
 def test_the_backlog_orders_by_priority_by_default(api: Api) -> None:
-    project = api.project("CRM")["project"]
+    project = api.project("Aurora")["project"]
     api.initiative(project["id"], "Alta", priority="HIGH")
     api.initiative(project["id"], "Baixa", priority="LOW")
 
     items = api.get("/planning/backlog").json()["items"]
 
-    assert [item["initiative"]["name"] for item in items][:2] == ["Alta", "CRM"]
+    assert [item["initiative"]["name"] for item in items][:2] == ["Alta", "Aurora"]
     assert items[-1]["initiative"]["name"] == "Baixa"
 
 
 def test_ordering_by_size_keeps_the_missing_estimates_last(api: Api) -> None:
     """§8: nulos por último **em qualquer direção**."""
-    project = api.project("CRM")["project"]
+    project = api.project("Aurora")["project"]
     api.initiative(project["id"], "Pequena", estimated_sprints=1)
     api.initiative(project["id"], "Grande", estimated_sprints=8)
 
@@ -196,12 +200,12 @@ def test_ordering_by_size_keeps_the_missing_estimates_last(api: Api) -> None:
     assert [item["initiative"]["name"] for item in ascending["items"]] == [
         "Pequena",
         "Grande",
-        "CRM",
+        "Aurora",
     ]
     assert [item["initiative"]["name"] for item in descending["items"]] == [
         "Grande",
         "Pequena",
-        "CRM",
+        "Aurora",
     ]
 
 

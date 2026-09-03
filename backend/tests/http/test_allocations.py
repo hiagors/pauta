@@ -12,8 +12,8 @@ def test_allocating_an_interval_reports_what_it_did(api: Api) -> None:
     faltam entram no relatório em vez de derrubar a operação (RN5).
     """
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
-    squad = api.squad("Dados-A")
+    initiative = api.project("Aurora")["initiatives"][0]
+    squad = api.squad("Alfa")
 
     result = api.allocate(initiative["id"], 21, 24, squad_id=squad["id"])
 
@@ -25,8 +25,8 @@ def test_allocating_an_interval_reports_what_it_did(api: Api) -> None:
 def test_allocating_promotes_the_initiative_out_of_the_backlog(api: Api) -> None:
     """RN2: ganhar alocação leva `BACKLOG` a `PLANNED`, automaticamente."""
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
-    squad = api.squad("Dados-A")
+    initiative = api.project("Aurora")["initiatives"][0]
+    squad = api.squad("Alfa")
 
     result = api.allocate(initiative["id"], 18, 19, squad_id=squad["id"])
 
@@ -37,8 +37,8 @@ def test_allocating_promotes_the_initiative_out_of_the_backlog(api: Api) -> None
 def test_repeating_the_same_allocation_creates_nothing(api: Api) -> None:
     """RN4: a operação é idempotente por célula."""
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
-    squad = api.squad("Dados-A")
+    initiative = api.project("Aurora")["initiatives"][0]
+    squad = api.squad("Alfa")
     api.allocate(initiative["id"], 18, 19, squad_id=squad["id"])
 
     again = api.allocate(initiative["id"], 18, 19, squad_id=squad["id"])
@@ -51,10 +51,10 @@ def test_a_second_assignee_in_the_same_cell_is_409(api: Api) -> None:
     """D17: a unicidade é `(initiative_id, sprint_id)` — um responsável por
     célula."""
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
-    dados_a = api.squad("Dados-A")
-    dados_b = api.squad("Dados-B")
-    api.allocate(initiative["id"], 18, 19, squad_id=dados_a["id"])
+    initiative = api.project("Aurora")["initiatives"][0]
+    alfa = api.squad("Alfa")
+    beta = api.squad("Beta")
+    api.allocate(initiative["id"], 18, 19, squad_id=alfa["id"])
 
     response = api.post(
         "/allocations",
@@ -62,7 +62,7 @@ def test_a_second_assignee_in_the_same_cell_is_409(api: Api) -> None:
             "initiative_id": initiative["id"],
             "from_sprint_number": 19,
             "to_sprint_number": 19,
-            "squad_id": dados_b["id"],
+            "squad_id": beta["id"],
         },
     )
 
@@ -73,8 +73,8 @@ def test_a_second_assignee_in_the_same_cell_is_409(api: Api) -> None:
 def test_a_done_initiative_refuses_a_new_allocation(api: Api) -> None:
     """RN7: só DONE e CANCELLED recusam. O histórico existente permanece."""
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
-    squad = api.squad("Dados-A")
+    initiative = api.project("Aurora")["initiatives"][0]
+    squad = api.squad("Alfa")
     api.post(f"/initiatives/{initiative['id']}/status", json={"status": "CANCELLED"})
 
     response = api.post(
@@ -100,31 +100,31 @@ def test_the_response_carries_the_current_alerts_of_the_touched_sprints(
     mostrar o aviso sem uma segunda chamada.
     """
     api.sprints()
-    crm = api.project("CRM")["initiatives"][0]
-    bnpl = api.project("BNPL")["initiatives"][0]
-    squad = api.squad("Dados-A")
-    bianca = api.member("Bianca")
-    api.join(squad["id"], [bianca["id"]], 18, 22)
-    api.allocate(crm["id"], 19, 19, squad_id=squad["id"])
+    aurora = api.project("Aurora")["initiatives"][0]
+    boreal = api.project("Boreal")["initiatives"][0]
+    squad = api.squad("Alfa")
+    ana = api.member("Ana")
+    api.join(squad["id"], [ana["id"]], 18, 22)
+    api.allocate(aurora["id"], 19, 19, squad_id=squad["id"])
 
-    result = api.allocate(bnpl["id"], 19, 19, squad_id=squad["id"])
+    result = api.allocate(boreal["id"], 19, 19, squad_id=squad["id"])
 
     overloaded = [
         alert for alert in result["alerts"] if alert["type"] == "SQUAD_OVERLOADED"
     ]
     assert [alert["sprint_number"] for alert in overloaded] == [19]
-    assert {ref["name"] for ref in overloaded[0]["entity_refs"]} >= {"CRM", "BNPL"}
+    assert {ref["name"] for ref in overloaded[0]["entity_refs"]} >= {"Aurora", "Boreal"}
 
 
 def test_a_capacity_reserve_project_does_not_overload_anyone(api: Api) -> None:
     """Cenário B do §13.1: a segunda frente é de projeto de reserva."""
     api.sprints()
-    crm = api.project("CRM")["initiatives"][0]
+    aurora = api.project("Aurora")["initiatives"][0]
     ferias = api.project("Férias", is_capacity_reserve=True)["initiatives"][0]
-    squad = api.squad("Dados-A")
-    bianca = api.member("Bianca")
-    api.join(squad["id"], [bianca["id"]], 18, 22)
-    api.allocate(crm["id"], 19, 19, squad_id=squad["id"])
+    squad = api.squad("Alfa")
+    ana = api.member("Ana")
+    api.join(squad["id"], [ana["id"]], 18, 22)
+    api.allocate(aurora["id"], 19, 19, squad_id=squad["id"])
 
     result = api.allocate(ferias["id"], 19, 19, squad_id=squad["id"])
 
@@ -135,38 +135,42 @@ def test_a_capacity_reserve_project_does_not_overload_anyone(api: Api) -> None:
 
 def test_a_member_can_be_the_assignee_directly(api: Api) -> None:
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
-    bianca = api.member("Bianca")
+    initiative = api.project("Aurora")["initiatives"][0]
+    ana = api.member("Ana")
 
-    api.allocate(initiative["id"], 18, 18, member_id=bianca["id"])
+    api.allocate(initiative["id"], 18, 18, member_id=ana["id"])
 
     found = api.get("/allocations").json()
-    assert found[0]["member_id"] == bianca["id"]
+    assert found[0]["member_id"] == ana["id"]
     assert found[0]["squad_id"] is None
 
 
 def test_the_list_filters_by_everything_the_spec_names(api: Api) -> None:
     api.sprints()
-    crm = api.project("CRM")
-    bnpl = api.project("BNPL")
-    dados_a = api.squad("Dados-A")
-    bianca = api.member("Bianca")
-    api.allocate(crm["initiatives"][0]["id"], 18, 19, squad_id=dados_a["id"])
-    api.allocate(bnpl["initiatives"][0]["id"], 20, 20, member_id=bianca["id"])
+    aurora = api.project("Aurora")
+    boreal = api.project("Boreal")
+    alfa = api.squad("Alfa")
+    ana = api.member("Ana")
+    api.allocate(aurora["initiatives"][0]["id"], 18, 19, squad_id=alfa["id"])
+    api.allocate(boreal["initiatives"][0]["id"], 20, 20, member_id=ana["id"])
 
     assert len(api.get("/allocations").json()) == 3
     assert len(api.get("/allocations", params={"sprint_from": 20}).json()) == 1
-    assert len(api.get("/allocations", params={"squad_id": dados_a["id"]}).json()) == 2
-    assert len(api.get("/allocations", params={"member_id": bianca["id"]}).json()) == 1
+    assert len(api.get("/allocations", params={"squad_id": alfa["id"]}).json()) == 2
+    assert len(api.get("/allocations", params={"member_id": ana["id"]}).json()) == 1
     assert (
-        len(api.get("/allocations", params={"project_id": crm["project"]["id"]}).json())
+        len(
+            api.get(
+                "/allocations", params={"project_id": aurora["project"]["id"]}
+            ).json()
+        )
         == 2
     )
     assert (
         len(
             api.get(
                 "/allocations",
-                params={"initiative_id": bnpl["initiatives"][0]["id"]},
+                params={"initiative_id": boreal["initiatives"][0]["id"]},
             ).json()
         )
         == 1
@@ -175,8 +179,8 @@ def test_the_list_filters_by_everything_the_spec_names(api: Api) -> None:
 
 def test_deleting_an_interval_removes_only_that_interval(api: Api) -> None:
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
-    squad = api.squad("Dados-A")
+    initiative = api.project("Aurora")["initiatives"][0]
+    squad = api.squad("Alfa")
     api.allocate(initiative["id"], 18, 22, squad_id=squad["id"])
 
     response = api.delete(
@@ -197,7 +201,7 @@ def test_deleting_an_interval_removes_only_that_interval(api: Api) -> None:
 def test_deleting_an_empty_interval_is_not_an_error(api: Api) -> None:
     """Intervalo sem alocação nenhuma é operação vazia, não 404."""
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
+    initiative = api.project("Aurora")["initiatives"][0]
 
     response = api.delete(
         "/allocations",
@@ -214,8 +218,8 @@ def test_deleting_an_empty_interval_is_not_an_error(api: Api) -> None:
 
 def test_deleting_a_single_cell_works_by_id(api: Api) -> None:
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
-    squad = api.squad("Dados-A")
+    initiative = api.project("Aurora")["initiatives"][0]
+    squad = api.squad("Alfa")
     created = api.allocate(initiative["id"], 18, 19, squad_id=squad["id"])
     cell = created["created"][0]
 
@@ -231,8 +235,8 @@ def test_losing_every_allocation_does_not_send_a_started_initiative_back(
 ) -> None:
     """§6.3: quem começou não volta ao backlog. Parar é DEPRIORITIZED, à mão."""
     api.sprints()
-    initiative = api.project("CRM")["initiatives"][0]
-    squad = api.squad("Dados-A")
+    initiative = api.project("Aurora")["initiatives"][0]
+    squad = api.squad("Alfa")
     api.allocate(initiative["id"], 18, 18, squad_id=squad["id"])
     api.post(f"/initiatives/{initiative['id']}/status", json={"status": "IN_PROGRESS"})
 

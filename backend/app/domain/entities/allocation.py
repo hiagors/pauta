@@ -1,6 +1,6 @@
 """Alocação: uma linha por sprint ocupada (§6.7).
 
-A reestruturação do CRM da Sprint 18 à 22 são cinco linhas. É o que torna a
+O Catálogo do Aurora, da Sprint 18 à 22, são cinco linhas. É o que torna a
 grade trivial de renderizar e permite pausar uma frente no meio sem gambiarra.
 """
 

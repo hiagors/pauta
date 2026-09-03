@@ -8,9 +8,9 @@ from tests.http.conftest import Api
 def test_a_squad_without_a_sprint_has_no_member_list(api: Api) -> None:
     """D11: composição é por sprint. Uma lista sem sprint seria mentira."""
     api.sprints()
-    squad = api.squad("Dados-A")
-    bianca = api.member("Bianca")
-    api.join(squad["id"], [bianca["id"]], 18, 22)
+    squad = api.squad("Alfa")
+    ana = api.member("Ana")
+    api.join(squad["id"], [ana["id"]], 18, 22)
 
     found = api.get("/squads").json()
 
@@ -20,24 +20,24 @@ def test_a_squad_without_a_sprint_has_no_member_list(api: Api) -> None:
 
 def test_asking_for_a_sprint_expands_the_composition(api: Api) -> None:
     api.sprints()
-    squad = api.squad("Dados-A")
-    bianca = api.member("Bianca")
-    api.join(squad["id"], [bianca["id"]], 18, 19)
+    squad = api.squad("Alfa")
+    ana = api.member("Ana")
+    api.join(squad["id"], [ana["id"]], 18, 19)
 
     on_19 = api.get("/squads", params={"sprint_number": 19}).json()[0]
     on_22 = api.get("/squads", params={"sprint_number": 22}).json()[0]
 
     assert on_19["sprint_number"] == 19
-    assert [item["short_name"] for item in on_19["members"]] == ["Bianca"]
+    assert [item["short_name"] for item in on_19["members"]] == ["Ana"]
     assert on_22["members"] == []
 
 
 def test_the_representative_has_to_be_an_active_member(api: Api) -> None:
-    emilie = api.member("Emilie")
-    api.delete(f"/members/{emilie['id']}")
+    carla = api.member("Carla")
+    api.delete(f"/members/{carla['id']}")
 
     response = api.post(
-        "/squads", json={"name": "Dados-A", "representative_member_id": emilie["id"]}
+        "/squads", json={"name": "Alfa", "representative_member_id": carla["id"]}
     )
 
     assert response.status_code == 422
@@ -45,8 +45,8 @@ def test_the_representative_has_to_be_an_active_member(api: Api) -> None:
 
 
 def test_the_representative_can_be_cleared_with_null(api: Api) -> None:
-    bianca = api.member("Bianca")
-    squad = api.squad("Dados-A", representative_member_id=bianca["id"])
+    ana = api.member("Ana")
+    squad = api.squad("Alfa", representative_member_id=ana["id"])
 
     updated = api.patch(
         f"/squads/{squad['id']}", json={"representative_member_id": None}
@@ -58,7 +58,7 @@ def test_the_representative_can_be_cleared_with_null(api: Api) -> None:
 def test_delete_is_a_soft_delete_and_returns_the_squad(api: Api) -> None:
     """Squad é agrupamento com prazo. O prazo terminar não apaga o que ela
     fez, então as alocações passadas continuam de pé."""
-    squad = api.squad("Dados-A")
+    squad = api.squad("Alfa")
 
     response = api.delete(f"/squads/{squad['id']}")
 
@@ -71,26 +71,26 @@ def test_get_returns_only_the_sprints_where_the_squad_has_people(api: Api) -> No
     seriam ruído aqui. Quem quer o intervalo inteiro pede
     `GET /squads/{id}/memberships`."""
     api.sprints()
-    squad = api.squad("Dados-A")
-    bianca = api.member("Bianca")
-    api.join(squad["id"], [bianca["id"]], 18, 19)
+    squad = api.squad("Alfa")
+    ana = api.member("Ana")
+    api.join(squad["id"], [ana["id"]], 18, 19)
 
     found = api.get(f"/squads/{squad['id']}").json()
 
-    assert found["squad"]["name"] == "Dados-A"
+    assert found["squad"]["name"] == "Alfa"
     assert [item["sprint_number"] for item in found["memberships"]] == [18, 19]
     assert [item["members"][0]["short_name"] for item in found["memberships"]] == [
-        "Bianca",
-        "Bianca",
+        "Ana",
+        "Ana",
     ]
 
 
 def test_the_memberships_endpoint_shows_the_empty_sprints_too(api: Api) -> None:
     """A matriz precisa da célula em branco para poder ser editada."""
     api.sprints()
-    squad = api.squad("Dados-A")
-    bianca = api.member("Bianca")
-    api.join(squad["id"], [bianca["id"]], 18, 19)
+    squad = api.squad("Alfa")
+    ana = api.member("Ana")
+    api.join(squad["id"], [ana["id"]], 18, 19)
 
     found = api.get(f"/squads/{squad['id']}/memberships").json()
 
@@ -100,9 +100,9 @@ def test_the_memberships_endpoint_shows_the_empty_sprints_too(api: Api) -> None:
 
 def test_the_memberships_endpoint_narrows_by_interval(api: Api) -> None:
     api.sprints()
-    squad = api.squad("Dados-A")
-    bianca = api.member("Bianca")
-    api.join(squad["id"], [bianca["id"]], 18, 22)
+    squad = api.squad("Alfa")
+    ana = api.member("Ana")
+    api.join(squad["id"], [ana["id"]], 18, 22)
 
     found = api.get(
         f"/squads/{squad['id']}/memberships",
@@ -115,24 +115,24 @@ def test_the_memberships_endpoint_narrows_by_interval(api: Api) -> None:
 def test_put_replaces_the_composition_in_the_interval(api: Api) -> None:
     """`PUT` é substituição, não acréscimo: quem ficou de fora sai."""
     api.sprints()
-    squad = api.squad("Dados-A")
-    bianca = api.member("Bianca")
-    emilie = api.member("Emilie")
-    api.join(squad["id"], [bianca["id"], emilie["id"]], 18, 22)
+    squad = api.squad("Alfa")
+    ana = api.member("Ana")
+    carla = api.member("Carla")
+    api.join(squad["id"], [ana["id"], carla["id"]], 18, 22)
 
-    resulting = api.join(squad["id"], [emilie["id"]], 19, 19)
+    resulting = api.join(squad["id"], [carla["id"]], 19, 19)
 
     on_19 = next(item for item in resulting if item["sprint_number"] == 19)
-    assert [item["short_name"] for item in on_19["members"]] == ["Emilie"]
+    assert [item["short_name"] for item in on_19["members"]] == ["Carla"]
     on_18 = api.get("/squads", params={"sprint_number": 18}).json()[0]
     assert len(on_18["members"]) == 2
 
 
 def test_an_empty_member_list_empties_the_interval(api: Api) -> None:
     api.sprints()
-    squad = api.squad("Dados-A")
-    bianca = api.member("Bianca")
-    api.join(squad["id"], [bianca["id"]], 18, 22)
+    squad = api.squad("Alfa")
+    ana = api.member("Ana")
+    api.join(squad["id"], [ana["id"]], 18, 22)
 
     resulting = api.join(squad["id"], [], 18, 22)
 
@@ -141,14 +141,14 @@ def test_an_empty_member_list_empties_the_interval(api: Api) -> None:
 
 def test_delete_removes_only_the_named_members(api: Api) -> None:
     api.sprints()
-    squad = api.squad("Dados-A")
-    bianca = api.member("Bianca")
-    emilie = api.member("Emilie")
-    api.join(squad["id"], [bianca["id"], emilie["id"]], 18, 22)
+    squad = api.squad("Alfa")
+    ana = api.member("Ana")
+    carla = api.member("Carla")
+    api.join(squad["id"], [ana["id"], carla["id"]], 18, 22)
 
     response = api.delete(
         f"/squads/{squad['id']}/memberships",
-        json={"sprint_from": 18, "sprint_to": 19, "member_ids": [bianca["id"]]},
+        json={"sprint_from": 18, "sprint_to": 19, "member_ids": [ana["id"]]},
     )
 
     assert response.status_code == 200
@@ -156,16 +156,16 @@ def test_delete_removes_only_the_named_members(api: Api) -> None:
         item["sprint_number"]: [member["short_name"] for member in item["members"]]
         for item in response.json()
     }
-    assert remaining[18] == ["Emilie"]
-    assert remaining[19] == ["Emilie"]
+    assert remaining[18] == ["Carla"]
+    assert remaining[19] == ["Carla"]
 
 
 def test_delete_without_member_ids_removes_everyone(api: Api) -> None:
     api.sprints()
-    squad = api.squad("Dados-A")
-    bianca = api.member("Bianca")
-    emilie = api.member("Emilie")
-    api.join(squad["id"], [bianca["id"], emilie["id"]], 18, 22)
+    squad = api.squad("Alfa")
+    ana = api.member("Ana")
+    carla = api.member("Carla")
+    api.join(squad["id"], [ana["id"], carla["id"]], 18, 22)
 
     response = api.delete(
         f"/squads/{squad['id']}/memberships",
@@ -177,7 +177,7 @@ def test_delete_without_member_ids_removes_everyone(api: Api) -> None:
 
 def test_an_inverted_interval_is_422(api: Api) -> None:
     api.sprints()
-    squad = api.squad("Dados-A")
+    squad = api.squad("Alfa")
 
     response = api.put(
         f"/squads/{squad['id']}/memberships",

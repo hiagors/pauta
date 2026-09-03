@@ -69,9 +69,9 @@ def _register_casefold(connection: SQLite3Connection) -> None:
     """Dá ao SQLite o `casefold()` do Python, para a busca do `?q=`.
 
     O `lower()` nativo do SQLite só dobra ASCII: sem isso, procurar
-    "REESTRUTURAÇÃO" não acha "Reestruturação", e o repositório de verdade
-    divergiria do fake — que usa `casefold()` — justamente nos nomes em
-    português, que são todos os nomes deste sistema.
+    "CATÁLOGO" não acha "Catálogo", e o repositório de verdade divergiria do
+    fake — que usa `casefold()` — justamente nos nomes em português, que são
+    todos os nomes deste sistema.
 
     O custo é que a comparação não usa índice. Num banco local de uso
     individual, com dezenas de projetos, isso não é custo nenhum.

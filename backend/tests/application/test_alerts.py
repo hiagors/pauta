@@ -40,13 +40,13 @@ def test_scenario_a_squad_in_two_initiatives_is_overloaded(
     world: World, fakes: Fakes
 ) -> None:
     world.sprints(18, 22)
-    dados_a = world.squad("Dados-A")
-    world.join(dados_a, world.member("Bianca"), 19)
+    alfa = world.squad("Alfa")
+    world.join(alfa, world.member("Ana"), 19)
     world.allocate(
-        world.initiative(world.project("CRM"), "Reestruturação"), 19, squad=dados_a
+        world.initiative(world.project("Aurora"), "Catálogo"), 19, squad=alfa
     )
     world.allocate(
-        world.initiative(world.project("BNPL"), "OpenFinance"), 19, squad=dados_a
+        world.initiative(world.project("Boreal"), "Portal Externo"), 19, squad=alfa
     )
 
     view = fakes.use_case(ListAlerts).execute()
@@ -54,11 +54,11 @@ def test_scenario_a_squad_in_two_initiatives_is_overloaded(
     assert sprints_with(view.items, AlertType.SQUAD_OVERLOADED) == [19]
     alert = only(view.items, AlertType.SQUAD_OVERLOADED)
     assert alert.severity is Severity.WARNING
-    assert "Dados-A" in alert.message
+    assert "Alfa" in alert.message
     assert "Sprint 19" in alert.message
-    assert "CRM / Reestruturação" in alert.message
+    assert "Aurora / Catálogo" in alert.message
     assert alert.entity_refs[0].type is EntityRefType.SQUAD
-    assert alert.entity_refs[0].id == dados_a.id
+    assert alert.entity_refs[0].id == alfa.id
 
 
 def test_scenario_b_a_capacity_reserve_initiative_does_not_overload(
@@ -66,15 +66,15 @@ def test_scenario_b_a_capacity_reserve_initiative_does_not_overload(
 ) -> None:
     """Quem está na sustentação sob demanda não fica travado (§3)."""
     world.sprints(18, 22)
-    dados_a = world.squad("Dados-A")
-    world.join(dados_a, world.member("Bianca"), 19)
+    alfa = world.squad("Alfa")
+    world.join(alfa, world.member("Ana"), 19)
     world.allocate(
-        world.initiative(world.project("CRM"), "Reestruturação"), 19, squad=dados_a
+        world.initiative(world.project("Aurora"), "Catálogo"), 19, squad=alfa
     )
     world.allocate(
-        world.initiative(world.project("SUS", reserve=True), "Sustentação"),
+        world.initiative(world.project("Plantão", reserve=True), "Sustentação"),
         19,
-        squad=dados_a,
+        squad=alfa,
     )
 
     view = fakes.use_case(ListAlerts).execute()
@@ -87,42 +87,42 @@ def test_scenario_c_a_member_in_two_squads_is_a_conflict(
     world: World, fakes: Fakes
 ) -> None:
     world.sprints(18, 22)
-    dados_a = world.squad("Dados-A")
-    dados_b = world.squad("Dados-B")
-    bianca = world.member("Bianca")
-    world.join(dados_a, bianca, 19)
-    world.join(dados_b, bianca, 19)
+    alfa = world.squad("Alfa")
+    beta = world.squad("Beta")
+    ana = world.member("Ana")
+    world.join(alfa, ana, 19)
+    world.join(beta, ana, 19)
     world.allocate(
-        world.initiative(world.project("BNPL"), "Reestruturação"), 19, squad=dados_a
+        world.initiative(world.project("Boreal"), "Catálogo"), 19, squad=alfa
     )
     world.allocate(
-        world.initiative(world.project("CRM"), "Dispatch Service"), 19, squad=dados_b
+        world.initiative(world.project("Aurora"), "Serviço de Envio"), 19, squad=beta
     )
 
     view = fakes.use_case(ListAlerts).execute()
 
     assert sprints_with(view.items, AlertType.MEMBER_CONFLICT) == [19]
     alert = only(view.items, AlertType.MEMBER_CONFLICT)
-    assert alert.subject_id == bianca.id
-    assert "Bianca" in alert.message
-    assert "Dados-A e Dados-B" in alert.message
+    assert alert.subject_id == ana.id
+    assert "Ana" in alert.message
+    assert "Alfa e Beta" in alert.message
     assert sprints_with(view.items, AlertType.SQUAD_OVERLOADED) == []
 
 
 def test_scenario_d_moving_between_squads_between_sprints_is_not_a_conflict(
     world: World, fakes: Fakes
 ) -> None:
-    """Emilie no BNPL nas 18-19 e no CRM da 20 em diante (§6.5)."""
+    """Carla no Boreal nas 18-19 e no Aurora da 20 em diante (§6.5)."""
     world.sprints(18, 22)
-    dados_a = world.squad("Dados-A")
-    dados_b = world.squad("Dados-B")
-    emilie = world.member("Emilie")
-    world.join(dados_b, emilie, 18, 19)
-    world.join(dados_a, emilie, 20, 21, 22)
-    bnpl_front = world.initiative(world.project("BNPL"), "Reestruturação")
-    crm_front = world.initiative(world.project("CRM"), "Dispatch Service")
-    world.allocate(bnpl_front, 18, 19, 20, 21, 22, squad=dados_b)
-    world.allocate(crm_front, 18, 19, 20, 21, 22, squad=dados_a)
+    alfa = world.squad("Alfa")
+    beta = world.squad("Beta")
+    carla = world.member("Carla")
+    world.join(beta, carla, 18, 19)
+    world.join(alfa, carla, 20, 21, 22)
+    boreal_front = world.initiative(world.project("Boreal"), "Catálogo")
+    aurora_front = world.initiative(world.project("Aurora"), "Serviço de Envio")
+    world.allocate(boreal_front, 18, 19, 20, 21, 22, squad=beta)
+    world.allocate(aurora_front, 18, 19, 20, 21, 22, squad=alfa)
 
     view = fakes.use_case(ListAlerts).execute()
 
@@ -134,11 +134,11 @@ def test_scenario_e_a_member_without_a_front_in_a_future_sprint_is_idle(
     world: World, fakes: Fakes
 ) -> None:
     world.sprints(18, 22)
-    squad = world.squad("Dados-A")
-    thalita = world.member("Thalita")
-    world.join(squad, thalita, 18, 19, 21, 22)
+    squad = world.squad("Alfa")
+    diana = world.member("Diana")
+    world.join(squad, diana, 18, 19, 21, 22)
     world.allocate(
-        world.initiative(world.project("CRM"), "Reestruturação"),
+        world.initiative(world.project("Aurora"), "Catálogo"),
         18,
         19,
         20,
@@ -152,8 +152,8 @@ def test_scenario_e_a_member_without_a_front_in_a_future_sprint_is_idle(
     assert sprints_with(view.items, AlertType.MEMBER_IDLE) == [20]
     alert = only(view.items, AlertType.MEMBER_IDLE)
     assert alert.severity is Severity.INFO
-    assert alert.subject_id == thalita.id
-    assert "Thalita" in alert.message
+    assert alert.subject_id == diana.id
+    assert "Diana" in alert.message
 
 
 def test_an_inactive_member_is_never_idle(world: World, fakes: Fakes) -> None:
@@ -171,15 +171,17 @@ def test_scenario_f_a_squad_with_allocation_and_nobody_in_it(
 ) -> None:
     """RN-S2: informativo, nunca bloqueio — planejar antes de contratar vale."""
     world.sprints(18, 22)
-    dados_c = world.squad("Dados-C")
-    world.allocate(world.initiative(world.project("PIX"), "API PIX"), 21, squad=dados_c)
+    gama = world.squad("Gama")
+    world.allocate(
+        world.initiative(world.project("Cobrança"), "API de Cobrança"), 21, squad=gama
+    )
 
     view = fakes.use_case(ListAlerts).execute()
 
     assert sprints_with(view.items, AlertType.EMPTY_SQUAD) == [21]
     alert = only(view.items, AlertType.EMPTY_SQUAD)
     assert alert.severity is Severity.INFO
-    assert alert.subject_id == dados_c.id
+    assert alert.subject_id == gama.id
 
 
 def test_scenario_g_muting_survives_a_third_initiative(
@@ -187,30 +189,30 @@ def test_scenario_g_muting_survives_a_third_initiative(
 ) -> None:
     """O `fingerprint` é ancorado no sujeito, nunca nas iniciativas (§7.3)."""
     world.sprints(18, 22)
-    dados_a = world.squad("Dados-A")
-    dados_b = world.squad("Dados-B")
-    bianca = world.member("Bianca")
-    world.join(dados_a, bianca, 19)
-    world.join(dados_b, bianca, 19)
-    crm = world.project("CRM")
-    world.allocate(world.initiative(crm, "Reestruturação"), 19, squad=dados_a)
-    world.allocate(world.initiative(crm, "Dispatch Service"), 19, squad=dados_b)
+    alfa = world.squad("Alfa")
+    beta = world.squad("Beta")
+    ana = world.member("Ana")
+    world.join(alfa, ana, 19)
+    world.join(beta, ana, 19)
+    aurora = world.project("Aurora")
+    world.allocate(world.initiative(aurora, "Catálogo"), 19, squad=alfa)
+    world.allocate(world.initiative(aurora, "Serviço de Envio"), 19, squad=beta)
     before = only(fakes.use_case(ListAlerts).execute().items, AlertType.MEMBER_CONFLICT)
     fakes.use_case(MuteAlert).execute(
         MuteAlertInput(
             fingerprint=before.fingerprint,
             alert_type=AlertType.MEMBER_CONFLICT,
-            reason="Conflito conhecido e intencional da Bianca.",
+            reason="Conflito conhecido e intencional da Ana.",
         )
     )
 
-    world.allocate(world.initiative(crm, "Terceira frente"), 19, squad=dados_a)
+    world.allocate(world.initiative(aurora, "Terceira frente"), 19, squad=alfa)
     view = fakes.use_case(ListAlerts).execute(AlertsQuery(include_muted=True))
 
     after = only(view.items, AlertType.MEMBER_CONFLICT)
     assert after.fingerprint == before.fingerprint
     assert after.is_muted is True
-    assert after.mute_reason == "Conflito conhecido e intencional da Bianca."
+    assert after.mute_reason == "Conflito conhecido e intencional da Ana."
     assert after.mute_id is not None
 
 
@@ -219,11 +221,11 @@ def test_muted_alerts_leave_the_list_but_stay_counted(
 ) -> None:
     """O painel mostra os não silenciados atrás de um contador (§7.3)."""
     world.sprints(18, 22)
-    squad = world.squad("Dados-A")
-    world.join(squad, world.member("Bianca"), 19)
-    crm = world.project("CRM")
-    world.allocate(world.initiative(crm, "Reestruturação"), 19, squad=squad)
-    world.allocate(world.initiative(crm, "Dispatch"), 19, squad=squad)
+    squad = world.squad("Alfa")
+    world.join(squad, world.member("Ana"), 19)
+    aurora = world.project("Aurora")
+    world.allocate(world.initiative(aurora, "Catálogo"), 19, squad=squad)
+    world.allocate(world.initiative(aurora, "Envio"), 19, squad=squad)
     fakes.use_case(MuteAlert).execute(
         MuteAlertInput(
             fingerprint=alert_fingerprint(AlertType.SQUAD_OVERLOADED, squad.id, 19),
@@ -240,11 +242,11 @@ def test_muted_alerts_leave_the_list_but_stay_counted(
 
 def test_unmuting_brings_the_alert_back(world: World, fakes: Fakes) -> None:
     world.sprints(18, 22)
-    squad = world.squad("Dados-A")
-    world.join(squad, world.member("Bianca"), 19)
-    crm = world.project("CRM")
-    world.allocate(world.initiative(crm, "Reestruturação"), 19, squad=squad)
-    world.allocate(world.initiative(crm, "Dispatch"), 19, squad=squad)
+    squad = world.squad("Alfa")
+    world.join(squad, world.member("Ana"), 19)
+    aurora = world.project("Aurora")
+    world.allocate(world.initiative(aurora, "Catálogo"), 19, squad=squad)
+    world.allocate(world.initiative(aurora, "Envio"), 19, squad=squad)
     mute = fakes.use_case(MuteAlert).execute(
         MuteAlertInput(
             fingerprint=alert_fingerprint(AlertType.SQUAD_OVERLOADED, squad.id, 19),
@@ -297,11 +299,11 @@ def test_the_default_window_starts_at_the_current_sprint(
     O passado já aconteceu: um conflito na Sprint 17 não é acionável.
     """
     world.sprints(16, 20)
-    dados_a = world.squad("Dados-A")
-    world.join(dados_a, world.member("Bianca"), 17)
-    crm = world.project("CRM")
-    world.allocate(world.initiative(crm, "Reestruturação"), 17, squad=dados_a)
-    world.allocate(world.initiative(crm, "Dispatch"), 17, squad=dados_a)
+    alfa = world.squad("Alfa")
+    world.join(alfa, world.member("Ana"), 17)
+    aurora = world.project("Aurora")
+    world.allocate(world.initiative(aurora, "Catálogo"), 17, squad=alfa)
+    world.allocate(world.initiative(aurora, "Envio"), 17, squad=alfa)
 
     default = fakes.use_case(ListAlerts).execute()
     widened = fakes.use_case(ListAlerts).execute(AlertsQuery(sprint_from=16))

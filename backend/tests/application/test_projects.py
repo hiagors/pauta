@@ -18,11 +18,11 @@ from tests.domain.conftest import uid
 
 def test_create_project_also_creates_the_first_initiative(fakes: Fakes) -> None:
     """RN-I1: projeto nunca nasce sem iniciativa."""
-    view = fakes.use_case(CreateProject).execute(CreateProjectInput(name="CRM"))
+    view = fakes.use_case(CreateProject).execute(CreateProjectInput(name="Aurora"))
 
     assert len(view.initiatives) == 1
     first = view.initiatives[0]
-    assert first.name == "CRM"
+    assert first.name == "Aurora"
     assert first.project_id == view.project.id
     assert first.status is InitiativeStatus.BACKLOG
     assert first.priority is Priority.MEDIUM
@@ -32,7 +32,7 @@ def test_create_project_also_creates_the_first_initiative(fakes: Fakes) -> None:
 
 def test_create_project_without_color_keeps_it_null(fakes: Fakes) -> None:
     """A cor gravada é nula; a cor padrão é resolvida na hora de desenhar."""
-    view = fakes.use_case(CreateProject).execute(CreateProjectInput(name="SUS"))
+    view = fakes.use_case(CreateProject).execute(CreateProjectInput(name="Plantão"))
 
     assert view.project.color is None
     stored = fakes.projects.get(view.project.id)
@@ -42,15 +42,15 @@ def test_create_project_without_color_keeps_it_null(fakes: Fakes) -> None:
 
 def test_create_project_rejects_duplicate_name(fakes: Fakes) -> None:
     create = fakes.use_case(CreateProject)
-    create.execute(CreateProjectInput(name="CRM"))
+    create.execute(CreateProjectInput(name="Aurora"))
 
     with pytest.raises(DuplicateName):
-        create.execute(CreateProjectInput(name="CRM"))
+        create.execute(CreateProjectInput(name="Aurora"))
 
 
 def test_create_project_normalizes_the_color(fakes: Fakes) -> None:
     view = fakes.use_case(CreateProject).execute(
-        CreateProjectInput(name="CRM", color="#0052cc")
+        CreateProjectInput(name="Aurora", color="#0052cc")
     )
 
     assert view.project.color == "#0052CC"
@@ -59,20 +59,20 @@ def test_create_project_normalizes_the_color(fakes: Fakes) -> None:
 def test_update_project_touches_only_the_fields_in_the_payload(
     world: World, fakes: Fakes
 ) -> None:
-    project = world.project("CRM", color="#0052CC")
+    project = world.project("Aurora", color="#0052CC")
 
     view = fakes.use_case(UpdateProject).execute(
-        project.id, UpdateProjectInput(description="Frentes do CRM")
+        project.id, UpdateProjectInput(description="Frentes do Aurora")
     )
 
-    assert view.description == "Frentes do CRM"
+    assert view.description == "Frentes do Aurora"
     assert view.color == "#0052CC"
     assert view.is_capacity_reserve is False
 
 
 def test_update_project_with_null_color_clears_it(world: World, fakes: Fakes) -> None:
     """`color: null` é diferente de "não falei de cor" (§6.1)."""
-    project = world.project("CRM", color="#0052CC")
+    project = world.project("Aurora", color="#0052CC")
 
     view = fakes.use_case(UpdateProject).execute(
         project.id, UpdateProjectInput(color=None)
@@ -86,7 +86,7 @@ def test_update_project_with_null_color_clears_it(world: World, fakes: Fakes) ->
 
 def test_update_project_can_toggle_capacity_reserve(world: World, fakes: Fakes) -> None:
     """Reserva de capacidade é configuração, ligável e desligável (§3)."""
-    project = world.project("SUS")
+    project = world.project("Plantão")
 
     fakes.use_case(UpdateProject).execute(
         project.id, UpdateProjectInput(is_capacity_reserve=True)
@@ -106,21 +106,23 @@ def test_update_project_can_toggle_capacity_reserve(world: World, fakes: Fakes) 
 def test_update_project_rejects_a_name_that_belongs_to_another(
     world: World, fakes: Fakes
 ) -> None:
-    world.project("CRM")
-    bnpl = world.project("BNPL")
+    world.project("Aurora")
+    boreal = world.project("Boreal")
 
     with pytest.raises(DuplicateName):
-        fakes.use_case(UpdateProject).execute(bnpl.id, UpdateProjectInput(name="CRM"))
+        fakes.use_case(UpdateProject).execute(
+            boreal.id, UpdateProjectInput(name="Aurora")
+        )
 
 
 def test_update_project_accepts_its_own_name(world: World, fakes: Fakes) -> None:
-    project = world.project("CRM")
+    project = world.project("Aurora")
 
     view = fakes.use_case(UpdateProject).execute(
-        project.id, UpdateProjectInput(name="CRM", description="mesma coisa")
+        project.id, UpdateProjectInput(name="Aurora", description="mesma coisa")
     )
 
-    assert view.name == "CRM"
+    assert view.name == "Aurora"
 
 
 def test_update_project_reports_unknown_id(fakes: Fakes) -> None:
@@ -131,43 +133,43 @@ def test_update_project_reports_unknown_id(fakes: Fakes) -> None:
 def test_get_project_includes_the_initiatives_in_queue_order(
     world: World, fakes: Fakes
 ) -> None:
-    project = world.project("CRM")
-    world.initiative(project, "Dispatch Service", priority=Priority.LOW)
-    world.initiative(project, "Reestruturação V1", priority=Priority.HIGH)
-    world.initiative(world.project("BNPL"), "OpenFinance")
+    project = world.project("Aurora")
+    world.initiative(project, "Serviço de Envio", priority=Priority.LOW)
+    world.initiative(project, "Catálogo V1", priority=Priority.HIGH)
+    world.initiative(world.project("Boreal"), "Portal Externo")
 
     view = fakes.use_case(GetProject).execute(project.id)
 
     assert [item.name for item in view.initiatives] == [
-        "Reestruturação V1",
-        "Dispatch Service",
+        "Catálogo V1",
+        "Serviço de Envio",
     ]
 
 
 def test_list_projects_filters_by_active_and_query(world: World, fakes: Fakes) -> None:
-    world.project("CRM")
-    bnpl = world.project("BNPL")
-    bnpl.deactivate()
-    fakes.projects.update(bnpl)
+    world.project("Aurora")
+    boreal = world.project("Boreal")
+    boreal.deactivate()
+    fakes.projects.update(boreal)
 
     assert [view.name for view in fakes.use_case(ListProjects).execute()] == [
-        "BNPL",
-        "CRM",
+        "Aurora",
+        "Boreal",
     ]
     assert [
         view.name for view in fakes.use_case(ListProjects).execute(active=True)
-    ] == ["CRM"]
+    ] == ["Aurora"]
     assert [
-        view.name for view in fakes.use_case(ListProjects).execute(query="crm")
-    ] == ["CRM"]
+        view.name for view in fakes.use_case(ListProjects).execute(query="aurora")
+    ] == ["Aurora"]
 
 
 def test_archive_project_removes_it_with_its_initiatives(
     world: World, fakes: Fakes
 ) -> None:
     """Projeto sem iniciativa não existe (RN-I2): as dele saem junto."""
-    project = world.project("CRM")
-    initiative = world.initiative(project, "Reestruturação V1")
+    project = world.project("Aurora")
+    initiative = world.initiative(project, "Catálogo V1")
 
     fakes.use_case(ArchiveProject).execute(project.id)
 
@@ -179,9 +181,9 @@ def test_archive_project_refuses_when_an_initiative_has_allocation(
     world: World, fakes: Fakes
 ) -> None:
     world.sprints(18, 18)
-    project = world.project("CRM")
-    initiative = world.initiative(project, "Reestruturação V1")
-    world.allocate(initiative, 18, squad=world.squad("Dados-A"))
+    project = world.project("Aurora")
+    initiative = world.initiative(project, "Catálogo V1")
+    world.allocate(initiative, 18, squad=world.squad("Alfa"))
 
     with pytest.raises(HasAllocations):
         fakes.use_case(ArchiveProject).execute(project.id)

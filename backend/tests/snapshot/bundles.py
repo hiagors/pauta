@@ -42,9 +42,9 @@ SPRINT_19 = Sprint(
 
 
 def full_bundle() -> SnapshotBundle:
-    crm = Project(
+    aurora = Project(
         id=uid(1),
-        name="CRM",
+        name="Aurora",
         description="Frente de relacionamento",
         color=Color("#0052CC"),
     )
@@ -53,16 +53,16 @@ def full_bundle() -> SnapshotBundle:
         name="Reserva de capacidade",
         is_capacity_reserve=True,
     )
-    bianca = Member(id=uid(11), name="Bianca Alves", short_name="Bianca", role="Dados")
-    thalita = Member(
-        id=uid(12), name="Thalita Souza", short_name="Thalita", is_active=False
+    ana = Member(id=uid(11), name="Ana Ribeiro", short_name="Ana", role="Dados")
+    diana = Member(
+        id=uid(12), name="Diana Martins", short_name="Diana", is_active=False
     )
-    dados_a = Squad(id=uid(21), name="Dados-A", representative_member_id=bianca.id)
-    dados_b = Squad(id=uid(22), name="Dados-B", is_active=False)
-    reestruturacao = Initiative(
+    alfa = Squad(id=uid(21), name="Alfa", representative_member_id=ana.id)
+    beta = Squad(id=uid(22), name="Beta", is_active=False)
+    catalogo = Initiative(
         id=uid(31),
-        project_id=crm.id,
-        name="Reestruturação V1",
+        project_id=aurora.id,
+        name="Catálogo V1",
         entered_at=date(2026, 7, 1),
         layer="Dados",
         description="Modelo novo | com pipe no texto",
@@ -77,21 +77,21 @@ def full_bundle() -> SnapshotBundle:
         entered_at=date(2026, 8, 15),
     )
     return SnapshotBundle(
-        projects=(crm, reserva),
-        initiatives=(reestruturacao, suporte),
-        members=(bianca, thalita),
-        squads=(dados_a, dados_b),
+        projects=(aurora, reserva),
+        initiatives=(catalogo, suporte),
+        members=(ana, diana),
+        squads=(alfa, beta),
         squad_memberships=(
             SquadMembership(
                 id=uid(41),
-                squad_id=dados_a.id,
-                member_id=bianca.id,
+                squad_id=alfa.id,
+                member_id=ana.id,
                 sprint_id=SPRINT_18.id,
             ),
             SquadMembership(
                 id=uid(42),
-                squad_id=dados_a.id,
-                member_id=bianca.id,
+                squad_id=alfa.id,
+                member_id=ana.id,
                 sprint_id=SPRINT_19.id,
             ),
         ),
@@ -99,21 +99,21 @@ def full_bundle() -> SnapshotBundle:
         allocations=(
             Allocation(
                 id=uid(51),
-                initiative_id=reestruturacao.id,
+                initiative_id=catalogo.id,
                 sprint_id=SPRINT_18.id,
-                assignee=Assignee.for_squad(dados_a.id),
+                assignee=Assignee.for_squad(alfa.id),
             ),
             Allocation(
                 id=uid(52),
-                initiative_id=reestruturacao.id,
+                initiative_id=catalogo.id,
                 sprint_id=SPRINT_19.id,
-                assignee=Assignee.for_squad(dados_a.id),
+                assignee=Assignee.for_squad(alfa.id),
             ),
             Allocation(
                 id=uid(53),
                 initiative_id=suporte.id,
                 sprint_id=SPRINT_19.id,
-                assignee=Assignee.for_member(thalita.id),
+                assignee=Assignee.for_member(diana.id),
             ),
         ),
         muted_alerts=(
@@ -121,7 +121,7 @@ def full_bundle() -> SnapshotBundle:
                 id=uid(61),
                 alert_type=AlertType.MEMBER_CONFLICT,
                 fingerprint="member:00000000-0000-0000-0000-00000000000b:19",
-                reason="Combinado com a Bianca: metade do tempo em cada squad.",
+                reason="Combinado com a Ana: metade do tempo em cada squad.",
                 created_at=datetime(2026, 9, 1, 13, 30, tzinfo=UTC),
             ),
         ),

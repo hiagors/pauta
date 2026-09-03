@@ -87,14 +87,14 @@ Estas decisões estão fechadas. Não reabra.
 ### Decisões que esta revisão fecha
 
 **Projeto ≠ iniciativa.** Um projeto grande se divide em frentes com prioridade e
-cronograma próprios. O CRM tem a reestruturação da V1, o Dispatch Service (serviço
-unificado de disparo de mensagens de recuperação) e o backlog da V2. Quem ocupa
+cronograma próprios. O Aurora tem o Catálogo V1, o Serviço de Envio (serviço
+unificado de disparo de mensagens) e o backlog da V2. Quem ocupa
 sprint é a **iniciativa**; o **projeto** só agrupa e dá a cor. O enum `Product` da
 revisão 1 foi removido — o projeto passou a ser esse agrupamento, e é cadastrado, não
 fixo no código.
 
 **Reserva de capacidade é configuração, não caso especial.** `Project` recebe a flag
-`is_capacity_reserve`, ligável e desligável no cadastro. O SUS é sustentação sob
+`is_capacity_reserve`, ligável e desligável no cadastro. O Plantão é sustentação sob
 demanda: quem está nele **não fica travado**. Quando a flag é `true`, as iniciativas
 daquele projeto:
 - aparecem na grade com faixa hachurada, não bloco sólido;
@@ -102,12 +102,12 @@ daquele projeto:
 - não aparecem no backlog nem em contagem de capacidade.
 
 **Squad é agrupamento com prazo.** Squad existe para não alocar pessoa por pessoa.
-Quem está nela muda por sprint (`SquadMembership`). A Emilie no BNPL até a 19 e no
-CRM a partir da 20 não é conflito. Squad tem representante opcional. Trabalho pequeno
+Quem está nela muda por sprint (`SquadMembership`). A Carla no Boreal até a 19 e no
+Aurora a partir da 20 não é conflito. Squad tem representante opcional. Trabalho pequeno
 pode ser alocado direto a um membro, sem squad.
 
 **Alertas podem ser silenciados.** Sem isso, o conflito conhecido e intencional da
-Bianca grita em toda sprint e o painel perde valor em uma semana. Silenciar exige um
+Ana grita em toda sprint e o painel perde valor em uma semana. Silenciar exige um
 motivo em texto e é reversível. O `fingerprint` é ancorado no **sujeito** do alerta
 (a squad ou o membro) e na sprint, nunca nas iniciativas envolvidas — assim entrar um
 terceiro projeto não desfaz o silenciamento. Ver §7.3.
@@ -472,7 +472,7 @@ A unidade de trabalho. É a linha do Gantt e o que recebe alocação.
 | `id` | UUID | estável para sempre |
 | `project_id` | UUID | obrigatório |
 | `name` | str | obrigatório, único **dentro do projeto** |
-| `layer` | str? | texto livre. Ex.: "Dispatch Service", "Dados", "Backend" |
+| `layer` | str? | texto livre. Ex.: "Serviço de Envio", "Dados", "Backend" |
 | `description` | str | default `""` |
 | `priority` | `Priority` | `HIGH`, `MEDIUM`, `LOW` |
 | `estimated_sprints` | int? | > 0 quando presente |
@@ -544,9 +544,9 @@ Uma linha por sprint, no mesmo idioma de `Allocation`. Unicidade:
 
 Isso é o que resolve o caso real:
 
-> Emilie ∈ squad BNPL nas sprints 18 e 19. Emilie ∈ squad CRM da sprint 20 em diante.
+> Carla ∈ squad Boreal nas sprints 18 e 19. Carla ∈ squad Aurora da sprint 20 em diante.
 
-Nenhuma sprint tem a Emilie nas duas squads, então não há conflito — e a squad do CRM
+Nenhuma sprint tem a Carla nas duas squads, então não há conflito — e a squad do Aurora
 "ganha um membro novo a partir da 20" sem que isso vaze para as sprints anteriores.
 
 **RN-S1.** `representative_member_id`, quando presente, precisa apenas referenciar um
@@ -583,7 +583,7 @@ não calcula dias úteis; `start_date` e `end_date` são a referência e ponto.
 
 `id` (UUID), `initiative_id`, `sprint_id`, `squad_id` (UUID?), `member_id` (UUID?).
 
-Uma linha por sprint ocupada. A reestruturação do CRM da Sprint 18 à 22 = cinco
+Uma linha por sprint ocupada. O Catálogo do Aurora da Sprint 18 à 22 = cinco
 linhas. Isso torna a grade trivial de renderizar e permite pausar uma frente no meio
 sem gambiarra.
 
@@ -710,8 +710,8 @@ mute_id           UUID?      presente quando is_muted; é o que o botão "reativ
 mute_reason       str?       presente quando is_muted
 ```
 
-`message` é específica, não genérica. Exemplo: *"Bianca está nas squads Dados-A e
-Dados-B, alocadas na Sprint 19 em BNPL / Reestruturação e CRM / Dispatch Service."*
+`message` é específica, não genérica. Exemplo: *"Ana está nas squads Alfa e
+Beta, alocadas na Sprint 19 em Boreal / Catálogo e Aurora / Serviço de Envio."*
 
 #### `fingerprint` — ancorado no sujeito
 
@@ -731,7 +731,7 @@ Onde `subject_id` é **só** o sujeito do alerta:
 As iniciativas envolvidas **não** entram no hash. Era o erro da revisão 1: se elas
 entrassem, um terceiro projeto caindo na mesma sprint mudaria o hash e desfaria o
 silenciamento — exatamente o que o silenciamento existe para evitar. O preço é que
-silenciar "Bianca na Sprint 19" silencia o conflito dela naquela sprint mesmo se os
+silenciar "Ana na Sprint 19" silencia o conflito dela naquela sprint mesmo se os
 projetos mudarem; isso é o comportamento desejado.
 
 O painel mostra os não silenciados; os silenciados ficam atrás de um contador
@@ -853,15 +853,15 @@ Formato pensado para renderizar direto, sem o front recalcular nada:
   ],
   "groups": [
     {
-      "project": { "id": "uuid", "name": "CRM", "color": "#0052CC",
+      "project": { "id": "uuid", "name": "Aurora", "color": "#0052CC",
                    "is_capacity_reserve": false },
       "rows": [
         {
-          "initiative": { "id": "uuid", "name": "Reestruturação V1",
+          "initiative": { "id": "uuid", "name": "Catálogo V1",
                           "layer": null, "status": "IN_PROGRESS",
                           "priority": "HIGH" },
           "bars": [
-            { "assignee": { "kind": "squad", "id": "uuid", "name": "Dados-A" },
+            { "assignee": { "kind": "squad", "id": "uuid", "name": "Alfa" },
               "from_sprint_number": 18, "to_sprint_number": 22,
               "allocation_ids": ["uuid"] }
           ]
@@ -1064,14 +1064,14 @@ coluna quando aquela sprint tem alerta.
 │ Iniciativa               │  18  │  19  │  20  │  21  │  22  │
 │                          │      │  ⚠   │      │      │      │
 ├──────────────────────────┼──────┴──────┴──────┴──────┴──────┤
-│ ▸ CRM                    │                                  │
-│   Reestruturação V1  Alta│ ███ Dados-A ██████████████████   │
-│   Dispatch Service  Média│      │ ██ Gabriel ██│      +     │
+│ ▸ Aurora                 │                                  │
+│   Catálogo V1        Alta│ ███ Alfa █████████████████████   │
+│   Serviço de Envio  Média│      │ ██ Bruno ████│     +      │
 ├──────────────────────────┼──────┴──────────────┴────────────┤
-│ ▸ BNPL                   │                                  │
-│   OpenFinance        Alta│      │ ██ Dados-B ██│      +     │
+│ ▸ Boreal                 │                                  │
+│   Portal Externo     Alta│      │ ██ Beta █████│     +      │
 ├──────────────────────────┼──────┴──────────────┴────────────┤
-│ ▸ SUS      (reserva)     │ ╱╱╱╱╱╱ Dados-A ╱╱╱╱╱╱╱╱╱╱╱╱╱╱   │
+│ ▸ Plantão  (reserva)     │ ╱╱╱╱╱╱ Alfa ╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱   │
 └──────────────────────────┴──────────────────────────────────┘
 ```
 
@@ -1098,8 +1098,8 @@ revisitado.
 1. membros (tabela + drawer);
 2. squads (tabela + drawer com nome, representante, ativo);
 3. **composição por sprint** — a matriz membro × sprint de uma squad, que é o que
-   torna o caso da Emilie editável e mostra, para cada membro, em qual outra squad ele
-   já está naquela sprint. É onde o conflito Bianca/Emilie/Gabriel fica visível antes
+   torna o caso da Carla editável e mostra, para cada membro, em qual outra squad ele
+   já está naquela sprint. É onde o conflito Ana/Carla/Bruno fica visível antes
    de virar alerta.
 
 **`/sprints`.** Lista com datas, marcação da sprint atual, e o botão "Criar próxima
@@ -1221,13 +1221,13 @@ pré-cadastrados no banco.
 
 | # | Cenário | Alerta esperado |
 |---|---|---|
-| A | Squad `Dados-A` alocada em `CRM / Reestruturação` e `BNPL / OpenFinance` na Sprint 19 | `SQUAD_OVERLOADED` na 19 |
+| A | Squad `Alfa` alocada em `Aurora / Catálogo` e `Boreal / Portal Externo` na Sprint 19 | `SQUAD_OVERLOADED` na 19 |
 | B | Mesma coisa, mas a segunda iniciativa é de um projeto com `is_capacity_reserve` | nenhum |
-| C | Bianca em `Dados-A` e `Dados-B` na Sprint 19; as duas squads em iniciativas diferentes | `MEMBER_CONFLICT` na 19 |
-| D | Emilie em `Dados-B` nas sprints 18–19 e em `Dados-A` da 20 em diante | nenhum em nenhuma sprint |
-| E | Thalita ativa, sem membership nem alocação direta na Sprint 20 (futura) | `MEMBER_IDLE` na 20 |
-| F | `Dados-C` alocada em `API PIX` na Sprint 21, sem membership na 21 | `EMPTY_SQUAD` na 21 |
-| G | Silenciar o cenário C com motivo; depois alocar uma terceira iniciativa à `Dados-A` na 19 | o silenciamento de C **continua** valendo (fingerprint estável) |
+| C | Ana em `Alfa` e `Beta` na Sprint 19; as duas squads em iniciativas diferentes | `MEMBER_CONFLICT` na 19 |
+| D | Carla em `Beta` nas sprints 18–19 e em `Alfa` da 20 em diante | nenhum em nenhuma sprint |
+| E | Diana ativa, sem membership nem alocação direta na Sprint 20 (futura) | `MEMBER_IDLE` na 20 |
+| F | `Gama` alocada em `API de Cobrança` na Sprint 21, sem membership na 21 | `EMPTY_SQUAD` na 21 |
+| G | Silenciar o cenário C com motivo; depois alocar uma terceira iniciativa à `Alfa` na 19 | o silenciamento de C **continua** valendo (fingerprint estável) |
 
 Os nomes acima são só rótulos de fixture. Nada deles é hardcoded no sistema.
 
@@ -1263,7 +1263,7 @@ Registro das mudanças estruturais, para quem tiver lido a versão anterior.
   explícita, com o caminho de volta ao `BACKLOG` fechado para quem já começou.
 - `is_capacity_reserve` continua em `Project`, mas passou a ser configuração explícita
   no cadastro (ligável e desligável) e agora neutraliza **também** `MEMBER_CONFLICT`,
-  não só `SQUAD_OVERLOADED`. Era o ponto que fazia o SUS travar a pessoa.
+  não só `SQUAD_OVERLOADED`. Era o ponto que fazia o Plantão travar a pessoa.
 - `Project.color` substituiu a derivação de cor por produto. Sem cor → cor neutra
   padrão.
 - Porta `Clock` **adicionada**, para `entered_at` e `is_current` serem testáveis.

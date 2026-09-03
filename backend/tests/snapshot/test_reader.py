@@ -58,7 +58,7 @@ def test_a_project_without_color_comes_back_without_color(
     restored = {project.name: project for project in reader.read(directory).projects}
 
     assert restored["Reserva de capacidade"].color is None
-    assert restored["CRM"].color is not None
+    assert restored["Aurora"].color is not None
 
 
 def test_an_empty_snapshot_reads_back_empty(

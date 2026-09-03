@@ -179,7 +179,7 @@ def load_snapshot(
     domínio.
 
     O nome que viaja é o `short_name` do membro: é ele que aparece nas
-    mensagens de alerta ("Bianca está nas squads...", §7.3) e nos chips da UI.
+    mensagens de alerta ("Ana está nas squads...", §7.3) e nos chips da UI.
     """
     cells = allocations.list_all(sprint_ids=window.ids)
     refs = load_initiative_refs(

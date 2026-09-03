@@ -74,7 +74,7 @@ def _sprint(repos: SqlRepositories, number: int = 18) -> Sprint:
     return sprint
 
 
-def _project(repos: SqlRepositories, name: str = "CRM", seed: int = 1) -> Project:
+def _project(repos: SqlRepositories, name: str = "Aurora", seed: int = 1) -> Project:
     project = Project.create(name=name, id=uid(seed))
     repos.projects.add(project)
     return project
@@ -93,13 +93,13 @@ def _initiative(
     return initiative
 
 
-def _squad(repos: SqlRepositories, name: str = "Dados-A", seed: int = 3) -> Squad:
+def _squad(repos: SqlRepositories, name: str = "Alfa", seed: int = 3) -> Squad:
     squad = Squad.create(name=name, id=uid(seed))
     repos.squads.add(squad)
     return squad
 
 
-def _member(repos: SqlRepositories, name: str = "Bianca", seed: int = 4) -> Member:
+def _member(repos: SqlRepositories, name: str = "Ana", seed: int = 4) -> Member:
     member = Member.create(name=name, short_name=name[:3], id=uid(seed))
     repos.members.add(member)
     return member
@@ -195,8 +195,8 @@ def test_an_initiative_has_one_assignee_per_sprint(
     """
     sprint = _sprint(repos)
     initiative = _initiative(repos, _project(repos))
-    first = _squad(repos, "Dados-A", seed=3)
-    second = _squad(repos, "Dados-B", seed=4)
+    first = _squad(repos, "Alfa", seed=3)
+    second = _squad(repos, "Beta", seed=4)
     repos.allocations.add_many(
         [
             Allocation.create_from_ids(
@@ -247,12 +247,12 @@ def test_the_same_person_is_not_twice_in_the_same_squad_and_sprint(
 
 def test_a_project_name_is_unique(repos: SqlRepositories, session: Session) -> None:
     """§6.1. O use case checa antes e devolve 409; a constraint é a rede."""
-    _project(repos, "CRM")
+    _project(repos, "Aurora")
 
     session.add(
         ProjectModel(
             id=uuid4(),
-            name="CRM",
+            name="Aurora",
             description="",
             color=None,
             is_capacity_reserve=False,
@@ -267,16 +267,16 @@ def test_an_initiative_name_repeats_across_projects_but_not_inside_one(
     repos: SqlRepositories, session: Session
 ) -> None:
     """§6.2: a unicidade é `(project_id, name)`, não `name`."""
-    crm = _project(repos, "CRM", seed=1)
-    bnpl = _project(repos, "BNPL", seed=2)
-    _initiative(repos, crm, "Dados", seed=3)
+    aurora = _project(repos, "Aurora", seed=1)
+    boreal = _project(repos, "Boreal", seed=2)
+    _initiative(repos, aurora, "Dados", seed=3)
     #: Mesmo nome, outro projeto: entra.
-    _initiative(repos, bnpl, "Dados", seed=4)
+    _initiative(repos, boreal, "Dados", seed=4)
 
     session.add(
         InitiativeModel(
             id=uuid4(),
-            project_id=crm.id,
+            project_id=aurora.id,
             name="Dados",
             layer=None,
             description="",
@@ -389,7 +389,7 @@ def test_the_data_survives_the_session_that_wrote_it(
         repos = SqlRepositories.build(session=writer, clock=clock)
         repos.projects.add(
             Project.create(
-                name="SUS",
+                name="Plantão",
                 description="Sustentação sob demanda",
                 color=Color("#ff8b00"),
                 is_capacity_reserve=True,

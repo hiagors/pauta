@@ -10,7 +10,7 @@ Três regras de formato, todas para o diff no Git e no Drive ficar legível:
 - chaves ordenadas e indentação de 2 (`dumps`);
 - listas ordenadas por `id`, nunca por ordem de inserção;
 - `ensure_ascii=False`, porque os nomes deste sistema são todos em português e
-  `Reestrutura\\u00e7\\u00e3o` não é um diff que alguém leia.
+  `Cat\\u00e1logo` não é um diff que alguém leia.
 
 Nenhum arquivo de entidade tem timestamp de geração (§9): ele mudaria o arquivo
 inteiro a cada export sem mudança de dado. O registro da geração é o

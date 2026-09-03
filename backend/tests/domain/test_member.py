@@ -7,26 +7,26 @@ from app.domain.errors import InvalidName
 
 
 def test_criacao() -> None:
-    member = Member.create(name="Bianca Souza", short_name="Bianca", role="Dados")
+    member = Member.create(name="Ana Martins", short_name="Ana", role="Dados")
     assert member.is_active
 
 
 def test_nome_e_nome_curto_sao_obrigatorios() -> None:
     with pytest.raises(InvalidName):
-        Member.create(name="", short_name="Bianca")
+        Member.create(name="", short_name="Ana")
     with pytest.raises(InvalidName):
-        Member.create(name="Bianca", short_name="  ")
+        Member.create(name="Ana", short_name="  ")
 
 
 def test_inativar_nao_apaga() -> None:
-    member = Member.create(name="Bianca", short_name="Bianca")
+    member = Member.create(name="Ana", short_name="Ana")
     member.deactivate()
     assert member.is_active is False
-    assert member.name == "Bianca"
+    assert member.name == "Ana"
 
 
 def test_reativar() -> None:
-    member = Member.create(name="Bianca", short_name="Bianca")
+    member = Member.create(name="Ana", short_name="Ana")
     member.deactivate()
     member.activate()
     assert member.is_active
