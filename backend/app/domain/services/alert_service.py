@@ -184,10 +184,18 @@ def _member_idle(snapshot: PlanningSnapshot, sprint_number: int) -> Iterator[Ale
     para quem está de plantão seria falso, e alerta que mente é alerta que
     se aprende a ignorar.
 
-    Sem teto (premissa A2 do §16): toda sprint da atual em diante entra.
+    O horizonte é a sprint atual e as duas seguintes
+    (`IDLE_HORIZON_SPRINTS`), e não a janela inteira. Com o time todo
+    cadastrado, quase toda sprint futura tem alguém sem frente: sem teto, o
+    painel virava dezenas de itens informativos e o `INFO` parava de significar
+    alguma coisa. Além de três sprints, "sem frente" é o plano ainda não
+    escrito, não ociosidade.
     """
     idle_from = snapshot.idle_from
-    if idle_from is None or sprint_number < idle_from:
+    idle_through = snapshot.idle_through
+    if idle_from is None or idle_through is None:
+        return
+    if not idle_from <= sprint_number <= idle_through:
         return
     for member_id, member_name in _sorted(snapshot.members):
         initiatives = effective_initiatives(

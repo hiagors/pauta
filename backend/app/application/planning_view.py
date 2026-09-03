@@ -123,7 +123,7 @@ def load_window(
 def load_quarter_window(*, sprints: SprintRepository, clock: Clock) -> SprintWindow:
     """RN13: as sprints que intersectam o trimestre corrente.
 
-    Trimestre civil, premissa A1 do §16 — trocar por um fiscal deslocado é
+    Trimestre civil, por RN13 — trocar por um fiscal deslocado é
     mexer só em `civil_quarter_bounds`.
     """
     everything = tuple(sprints.list_all())

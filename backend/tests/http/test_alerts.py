@@ -24,7 +24,9 @@ def test_an_active_member_with_no_front_is_reported_as_idle(api: Api) -> None:
 
     idle = alerts_of(api.get("/alerts").json(), "MEMBER_IDLE")
 
-    assert [alert["sprint_number"] for alert in idle] == [18, 19, 20, 21, 22]
+    # A janela default vai da 18 à 22, mas o horizonte do `MEMBER_IDLE` é a
+    # sprint atual e as duas seguintes (§7.3): a 21 e a 22 ficam de fora.
+    assert [alert["sprint_number"] for alert in idle] == [18, 19, 20]
     assert idle[0]["severity"] == "INFO"
 
 
@@ -87,12 +89,19 @@ def test_a_handover_between_squads_is_not_a_conflict(api: Api) -> None:
 
 
 def test_the_window_narrows_by_interval(api: Api) -> None:
+    """O filtro estreita a janela; ele não desloca o horizonte do `MEMBER_IDLE`.
+
+    A sprint atual é a 18, então o horizonte é 18–20 em qualquer recorte.
+    Pedir 20–21 devolve a 20 e não a 21: a 21 está fora do horizonte, e
+    ancorá-lo no começo do filtro faria o mesmo alerta aparecer ou sumir
+    conforme o intervalo pedido.
+    """
     api.sprints()
     api.member("Diana")
 
     narrowed = api.get("/alerts", params={"sprint_from": 20, "sprint_to": 21}).json()
 
-    assert [alert["sprint_number"] for alert in narrowed["items"]] == [20, 21]
+    assert [alert["sprint_number"] for alert in narrowed["items"]] == [20]
 
 
 def test_muting_takes_the_alert_out_of_the_list_but_keeps_it_counted(

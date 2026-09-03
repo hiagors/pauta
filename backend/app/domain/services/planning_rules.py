@@ -36,6 +36,14 @@ from app.domain.value_objects.sprint_range import SprintRange
 #: Padrão do §6.6: começa numa segunda, termina na sexta da semana seguinte.
 DEFAULT_SPRINT_LENGTH_DAYS = 11
 
+#: Horizonte do `MEMBER_IDLE` (§7.3): a sprint atual e as duas seguintes.
+#:
+#: Sem teto, nove pessoas × sete sprints futuras viravam dezenas de itens
+#: informativos no painel, e um `INFO` que aparece sempre é um `INFO` que se
+#: aprende a ignorar. Três sprints é o horizonte em que "fulano está sem
+#: frente" é acionável; além disso, o plano é intenção, não ociosidade.
+IDLE_HORIZON_SPRINTS = 3
+
 _MONDAY = 0
 _MONTHS_PER_QUARTER = 3
 
@@ -118,6 +126,16 @@ class PlanningSnapshot:
         if self.current_sprint_number is None:
             return min(self.sprint_numbers)
         return self.current_sprint_number
+
+    @property
+    def idle_through(self) -> int | None:
+        """Última sprint do horizonte do `MEMBER_IDLE` (§7.3).
+
+        A numeração é contígua por invariante (§6.6, sem buraco), então somar
+        números é somar sprints.
+        """
+        start = self.idle_from
+        return None if start is None else start + IDLE_HORIZON_SPRINTS - 1
 
     def squad_ids_of(self, member_id: UUID, sprint_number: int) -> frozenset[UUID]:
         """Squads a que o membro pertence **naquela** sprint."""
@@ -276,9 +294,10 @@ def propose_next_sprint(
 
 
 def civil_quarter_bounds(today: date) -> tuple[date, date]:
-    """Trimestre **civil** que contém `today` (premissa A1 do §16).
+    """Trimestre **civil** que contém `today` (RN13).
 
-    Trocar por um trimestre fiscal deslocado é mexer só nesta função.
+    Civil, e não fiscal deslocado: foi a decisão de 03/09/2026 que fechou a
+    premissa A1 do §16. Trocar é mexer só nesta função.
     """
     quarter = (today.month - 1) // _MONTHS_PER_QUARTER
     first_month = quarter * _MONTHS_PER_QUARTER + 1

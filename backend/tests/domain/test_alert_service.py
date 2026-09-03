@@ -3,12 +3,16 @@
 Os nomes são rótulos de fixture. Nada deles é hardcoded no sistema.
 """
 
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from app.domain.entities.muted_alert import MutedAlert
 from app.domain.services.alert_service import evaluate_alerts
 from app.domain.services.fingerprint import alert_fingerprint
-from app.domain.services.planning_rules import PlanningSnapshot
+from app.domain.services.planning_rules import (
+    IDLE_HORIZON_SPRINTS,
+    PlanningSnapshot,
+)
 from app.domain.value_objects.alert import Alert, AlertType, EntityRefType, Severity
 from tests.domain.conftest import (
     FrozenClock,
@@ -232,6 +236,24 @@ class TestScenarioE:
         """Sprint 18 já passou: quem não estava em nada lá não é notícia."""
         alerts = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_IDLE)
         assert 18 not in {alert.sprint_number for alert in alerts}
+
+    def test_the_horizon_is_the_current_sprint_and_the_two_after_it(self) -> None:
+        """§7.3: o alerta tem teto, e ele é `IDLE_HORIZON_SPRINTS`.
+
+        Com o time inteiro cadastrado, quase toda sprint futura tem alguém sem
+        frente. Sem teto o painel virava dezenas de `INFO`, e um `INFO` que
+        aparece sempre é um `INFO` que se aprende a ignorar.
+        """
+        wide = replace(
+            self.snapshot(),
+            sprint_numbers=(18, 19, 20, 21, 22, 23),
+            current_sprint_number=19,
+        )
+
+        alerts = of_type(evaluate_alerts(wide), AlertType.MEMBER_IDLE)
+
+        assert IDLE_HORIZON_SPRINTS == 3
+        assert sorted({alert.sprint_number for alert in alerts}) == [19, 20, 21]
 
     def test_the_severity_is_info(self) -> None:
         alert = of_type(evaluate_alerts(self.snapshot()), AlertType.MEMBER_IDLE)[0]

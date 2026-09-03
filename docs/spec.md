@@ -696,7 +696,10 @@ iniciativa ou sprint sem migração. **Sem endpoint, sem UI, sem uso na v1.**
   `is_current` é `false` em todas.
 - **RN13.** A janela padrão da grade é o **trimestre corrente**: as sprints cujo
   intervalo intersecta o trimestre que contém a data de hoje. `sprint_from` e
-  `sprint_to` explícitos sobrepõem o default.
+  `sprint_to` explícitos sobrepõem o default. "Trimestre corrente" é o trimestre
+  **civil** — jan–mar, abr–jun, jul–set, out–dez —, derivado da data do `Clock`; era a
+  premissa A1 do §16, decidida em 03/09/2026. Um trimestre fiscal deslocado é mexer só
+  em `civil_quarter_bounds`, em `domain/services/planning_rules.py`.
 
 ### 7.3 Alertas
 
@@ -707,7 +710,7 @@ visual, **jamais bloqueio**.
 |---|---|---|
 | `SQUAD_OVERLOADED` | `WARNING` | Squad com alocação em mais de uma iniciativa na mesma sprint, desconsiderando iniciativas de projetos com `is_capacity_reserve` |
 | `MEMBER_CONFLICT` | `WARNING` | Membro ativo com mais de uma iniciativa **efetiva** (§6.8) não-reserva na mesma sprint — tipicamente por estar em duas squads naquela sprint |
-| `MEMBER_IDLE` | `INFO` | Membro ativo sem nenhuma iniciativa efetiva **não-reserva** numa sprint atual ou futura |
+| `MEMBER_IDLE` | `INFO` | Membro ativo sem nenhuma iniciativa efetiva **não-reserva** na sprint atual ou nas duas seguintes |
 | `EMPTY_SQUAD` | `INFO` | Squad ativa com alocação numa sprint, mas sem nenhum `SquadMembership` naquela sprint |
 
 Duas leituras da tabela que já custaram divergência entre spec e código, e por isso
@@ -718,6 +721,14 @@ estão escritas:
   duas frentes que alguém vai ter que absorver. `EMPTY_SQUAD`, que **é** qualificado,
   segue a regra oposta pelo motivo simétrico: cobrar composição de um agrupamento que
   acabou é pedir contratação para um time que não existe mais.
+- **`MEMBER_IDLE` tem horizonte de três sprints: a atual e as duas seguintes.** Era a
+  premissa A2 do §16, decidida em 03/09/2026. Sem teto, nove pessoas × sete sprints
+  futuras viravam dezenas de itens informativos no painel, e um `INFO` que aparece
+  sempre é um `INFO` que se aprende a ignorar. Além de três sprints, "fulano está sem
+  frente" descreve plano ainda não escrito, não ociosidade. O horizonte é **absoluto**:
+  ele parte da sprint atual (RN12) e não se desloca com `?sprint_from=`, senão o mesmo
+  alerta apareceria ou sumiria conforme o intervalo pedido. A constante é
+  `IDLE_HORIZON_SPRINTS`, em `domain/services/planning_rules.py`.
 - **Reserva de capacidade não preenche a sprint de ninguém.** Quem está só num projeto
   com `is_capacity_reserve` dispara `MEMBER_IDLE`, porque é isso que a flag significa:
   se a iniciativa não entra em contagem de capacidade (§3), quem está só nela tem
