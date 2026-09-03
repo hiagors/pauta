@@ -189,17 +189,43 @@ def test_the_scheduled_export_writes_the_snapshot_of_the_committed_data(
 
 
 def test_a_sequence_of_mutations_collapses_into_one_export(api: Api) -> None:
-    """RNF3: o debounce coalesce a edição em sequência, e o export que sai é o
-    do estado final."""
+    """RNF3: quatro mutações, quatro agendamentos, **um** export.
+
+    O que faz este teste ser sobre coalescing é o `cancelled`: cada
+    agendamento derruba o anterior, e só o último sobrevive para disparar. A
+    asserção sobre o conteúdo do arquivo, sozinha, passaria também num sistema
+    que exportasse na hora a cada mutação — que é o oposto da regra.
+    """
     api.project("Aurora")
     api.project("Boreal")
     api.sprints(18, 19)
 
+    timers = api.snapshot_timers.created
+    assert len(timers) == 4
+    assert [timer.cancelled for timer in timers] == [True, True, True, False]
+
     api.flush_snapshot()
 
+    assert [timer.fired for timer in timers] == [False, False, False, True]
     text = (api.snapshot_dir / "projects.json").read_text(encoding="utf-8")
     assert "Aurora" in text
     assert "Boreal" in text
+
+
+def test_the_debouncer_survives_the_request_that_created_it(api: Api) -> None:
+    """A memoização em `app.state` **é** o mecanismo do coalescing (RNF3).
+
+    Um debouncer novo por requisição não teria o que cancelar, e o teste acima
+    veria quatro timers vivos em vez de um. Este aqui olha a causa em vez do
+    efeito: é a mesma instância nas quatro requisições, e é ela que está em
+    `app.state`.
+    """
+    api.project("Aurora")
+    first = api.app.state.snapshot_debouncer
+    api.project("Boreal")
+
+    assert api.app.state.snapshot_debouncer is first
+    assert len(api.snapshot_timers.created) == 2
 
 
 def test_a_read_does_not_schedule_anything(api: Api) -> None:

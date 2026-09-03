@@ -11,9 +11,12 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+from app.adapters.inbound.http.deps import provide_timer_factory
 from app.adapters.inbound.http.main import API_PREFIX, OPENAPI_URL, create_app
 from app.config.settings import DEFAULT_CORS_ORIGINS, Settings
 from tests.http.conftest import Api
+from tests.persistence.conftest import database_url, upgrade
+from tests.snapshot.timers import TimerSpy
 
 #: A tabela do §8, método a método — os dois de snapshot inclusive (Fase 5).
 ENDPOINTS: tuple[tuple[str, str], ...] = (
@@ -387,3 +390,68 @@ def test_creating_the_application_touches_no_database(tmp_path: Path) -> None:
             snapshot_dir=tmp_path / "snapshots",
         )
     )
+
+
+def test_the_application_reads_the_database_url_it_was_given(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    """`create_app(settings)` vale para **todos** os campos, não para alguns.
+
+    Duas aplicações, dois bancos, no mesmo processo: o projeto criado na
+    primeira não pode aparecer na segunda. Falharia das duas formas que a
+    dependência já teve — lendo `DATABASE_URL` do processo (as duas veriam o
+    mesmo banco do ambiente) ou memoizando a fábrica num `lru_cache` de módulo
+    (a segunda herdaria a engine da primeira).
+
+    O `DATABASE_URL` do ambiente aponta para um caminho que não existe de
+    propósito: se alguém voltar a lê-lo, o teste quebra com o erro do SQLite,
+    e não com uma asserção obscura.
+    """
+    monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///nao/existe.sqlite")
+    first, second = tmp_path / "um.sqlite", tmp_path / "dois.sqlite"
+    upgrade(first)
+    upgrade(second)
+
+    def app_for(path: Path) -> TestClient:
+        app = create_app(
+            Settings(
+                database_url=database_url(path),
+                snapshot_dir=tmp_path / "snapshots",
+            )
+        )
+        # Sem isto, o `POST` abaixo deixa um `threading.Timer` de 5 segundos
+        # que **não** é daemon (RNF3), e o interpretador o espera no fim da
+        # suíte. Aqui só o timer é de teste; o resto do caminho é o de
+        # produção, que é o que este teste existe para exercitar.
+        app.dependency_overrides[provide_timer_factory] = lambda: TimerSpy()
+        return TestClient(app)
+
+    with app_for(first) as client:
+        created = client.post(f"{API_PREFIX}/projects", json={"name": "Aurora"})
+        assert created.status_code == 201, created.json()
+        listed = client.get(f"{API_PREFIX}/projects").json()
+        assert [item["name"] for item in listed] == ["Aurora"]
+
+    with app_for(second) as client:
+        assert client.get(f"{API_PREFIX}/projects").json() == []
+
+
+def test_the_session_factory_is_built_once_per_application(tmp_path: Path) -> None:
+    """Uma engine por aplicação, não uma por requisição.
+
+    `provide_session_factory` guarda a fábrica em `app.state` na primeira
+    requisição. Sem isso, cada requisição abriria uma engine nova — e num
+    SQLite de arquivo isso passaria despercebido até o primeiro `:memory:`.
+    """
+    path = tmp_path / "pauta.sqlite"
+    upgrade(path)
+    app = create_app(
+        Settings(database_url=database_url(path), snapshot_dir=tmp_path / "snapshots")
+    )
+
+    with TestClient(app) as client:
+        client.get(f"{API_PREFIX}/projects")
+        first = app.state.session_factory
+        client.get(f"{API_PREFIX}/projects")
+
+    assert app.state.session_factory is first

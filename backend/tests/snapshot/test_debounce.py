@@ -6,10 +6,15 @@ o teste é quem o dispara.
 """
 
 import logging
+import threading
 
 import pytest
 
-from app.adapters.outbound.snapshot.debounce import DEFAULT_DELAY, SnapshotDebouncer
+from app.adapters.outbound.snapshot.debounce import (
+    DEFAULT_DELAY,
+    SnapshotDebouncer,
+    durable_timer,
+)
 from tests.snapshot.timers import TimerSpy
 
 
@@ -98,3 +103,28 @@ def test_a_failed_export_does_not_block_the_next_one(timers: TimerSpy) -> None:
     timers.pending.fire()
 
     assert calls == [1, 1]
+
+
+def test_the_timer_is_not_a_daemon_even_when_created_from_one() -> None:
+    """RNF3: o export dos últimos cinco segundos não pode morrer com o processo.
+
+    `Thread.daemon` herda de quem cria a thread, e em produção quem cria esta é
+    a tarefa de fundo da requisição — que o Starlette roda numa worker do
+    anyio, que é daemon. Um `threading.Timer` puro sairia daemon ali, o
+    interpretador não o esperaria, e a promessa do topo de `debounce.py` seria
+    falsa exatamente no caminho que a RNF3 descreve.
+
+    O teste reproduz o berço: cria o timer **de dentro** de uma thread daemon.
+    """
+    created: list[threading.Timer] = []
+
+    def make() -> None:
+        timer = durable_timer(DEFAULT_DELAY, lambda: None)
+        assert isinstance(timer, threading.Timer)
+        created.append(timer)
+
+    thread = threading.Thread(target=make, daemon=True)
+    thread.start()
+    thread.join()
+
+    assert created[0].daemon is False

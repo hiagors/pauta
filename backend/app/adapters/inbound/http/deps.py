@@ -38,7 +38,6 @@ Quem fica de fora é o router de `/snapshots` (ver `main.py`): a importação
 
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, fields
-from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Final, Self
 
@@ -57,30 +56,20 @@ from app.adapters.outbound.persistence.repositories import (
     SqlAlchemySquadRepository,
 )
 from app.adapters.outbound.persistence.session import make_engine, make_session_factory
-from app.adapters.outbound.snapshot.debounce import SnapshotDebouncer
+from app.adapters.outbound.snapshot.debounce import (
+    SnapshotDebouncer,
+    TimerFactory,
+    durable_timer,
+)
 from app.adapters.outbound.snapshot.reader import DirectorySnapshotReader
 from app.adapters.outbound.snapshot.writer import DirectorySnapshotWriter
 from app.adapters.outbound.system_clock import SystemClock
 from app.application.use_cases.snapshots.export import ExportSnapshot
-from app.config.settings import Settings, get_settings
+from app.config.settings import Settings
 from app.domain.ports.clock import Clock
 
 #: Os métodos que mudam dado. O `GET` não agenda export (RNF3).
 MUTATING_METHODS: Final = frozenset({"POST", "PUT", "PATCH", "DELETE"})
-
-
-@lru_cache
-def get_session_factory() -> sessionmaker[Session]:
-    """Engine e fábrica de sessões, uma vez por processo.
-
-    É uma dependência, e não um global do módulo, para que ela seja
-    substituível: a suíte de HTTP troca esta função por uma que devolve a
-    fábrica do SQLite em memória, e nenhuma engine de arquivo é aberta como
-    efeito colateral de importar `main.py`.
-    """
-    settings = get_settings()
-    engine = make_engine(settings.database_url, echo=settings.sql_echo)
-    return make_session_factory(engine)
 
 
 def provide_settings(request: Request) -> Settings:
@@ -99,6 +88,35 @@ def provide_settings(request: Request) -> Settings:
 SettingsDep = Annotated[Settings, Depends(provide_settings)]
 
 
+def provide_session_factory(
+    request: Request, settings: SettingsDep
+) -> sessionmaker[Session]:
+    """Engine e fábrica de sessões **desta** aplicação, criadas uma vez.
+
+    A URL vem de `app.state.settings`, pelo mesmo motivo que `snapshot_dir` e
+    `cors_origins` vêm: `create_app(settings)` tem que valer para todos os
+    campos, e não para alguns. Lendo o ambiente aqui, o `database_url` passado
+    à fábrica era silenciosamente ignorado — a única configuração do sistema
+    com duas fontes de verdade.
+
+    A memoização é em `app.state`, e não um `lru_cache` de módulo, pelo mesmo
+    motivo de `provide_snapshot_debouncer`: duas aplicações no mesmo processo
+    (a suíte cria uma por teste) não podem herdar a engine uma da outra.
+
+    Nasce na primeira requisição, não no `create_app`: é o que mantém a
+    promessa de que criar a aplicação não abre banco (ver `main.py`).
+    """
+    existing: sessionmaker[Session] | None = getattr(
+        request.app.state, "session_factory", None
+    )
+    if existing is not None:
+        return existing
+    engine = make_engine(settings.database_url, echo=settings.sql_echo)
+    factory = make_session_factory(engine)
+    request.app.state.session_factory = factory
+    return factory
+
+
 def provide_clock() -> Clock:
     """O relógio é porta, e entra pelo adapter como qualquer outra.
 
@@ -111,7 +129,7 @@ def provide_clock() -> Clock:
 
 
 def provide_session(
-    factory: Annotated[sessionmaker[Session], Depends(get_session_factory)],
+    factory: Annotated[sessionmaker[Session], Depends(provide_session_factory)],
 ) -> Iterator[Session]:
     """Uma transação por requisição."""
     with factory() as session:
@@ -211,11 +229,28 @@ def snapshot_exporter(
     return run
 
 
+def provide_timer_factory() -> TimerFactory:
+    """O agendador do debounce, numa dependência só dele.
+
+    É o único ponto do caminho da RNF3 que a suíte precisa trocar — e é por
+    isso que ele existe separado. Antes, a suíte substituía
+    `provide_snapshot_debouncer` inteiro por um lambda que devolvia sempre a
+    mesma instância, e com isso a memoização em `app.state` — que **é** o
+    mecanismo do coalescing em produção — não era exercitada por teste nenhum:
+    trocá-la por um debouncer novo a cada requisição, ou seja, zero coalescing,
+    deixaria a suíte verde do mesmo jeito.
+
+    Com o timer fora, o resto do caminho roda de verdade em cada teste de HTTP.
+    """
+    return durable_timer
+
+
 def provide_snapshot_debouncer(
     request: Request,
-    factory: Annotated[sessionmaker[Session], Depends(get_session_factory)],
+    factory: Annotated[sessionmaker[Session], Depends(provide_session_factory)],
     clock: Annotated[Clock, Depends(provide_clock)],
     settings: SettingsDep,
+    timer_factory: Annotated[TimerFactory, Depends(provide_timer_factory)],
 ) -> SnapshotDebouncer:
     """Um debounce por aplicação, guardado em `app.state`.
 
@@ -233,7 +268,10 @@ def provide_snapshot_debouncer(
     if existing is not None:
         return existing
     debouncer = SnapshotDebouncer(
-        snapshot_exporter(factory=factory, directory=settings.snapshot_dir, clock=clock)
+        snapshot_exporter(
+            factory=factory, directory=settings.snapshot_dir, clock=clock
+        ),
+        timer_factory=timer_factory,
     )
     request.app.state.snapshot_debouncer = debouncer
     return debouncer

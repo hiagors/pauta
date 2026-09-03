@@ -13,12 +13,18 @@ Três decisões, cada uma com um motivo que custa caro descobrir depois:
   mantém em pé o caminho de verdade do `deps.py`: uma transação por requisição,
   com `commit` no fim e `rollback` na exceção.
 
-A Fase 5 acrescentou uma quarta: **o timer do debounce é do teste**. O que a
-suíte precisa verificar é a regra da RNF3 — mutação bem-sucedida agenda,
-importação não —, e esperar cinco segundos por teste não verificaria nada
-melhor. `api.snapshot_scheduled` diz se a mutação agendou; `api.flush_snapshot()`
-faz o que a thread do timer faria ao vencer o intervalo. O `run` do debounce é o
-de produção, montado por `snapshot_exporter`: só o timer é de teste.
+A Fase 5 acrescentou uma quarta: **o timer do debounce é do teste, e só ele**.
+O que a suíte precisa verificar é a regra da RNF3 — mutação bem-sucedida
+agenda, importação não —, e esperar cinco segundos por teste não verificaria
+nada melhor. `api.snapshot_scheduled` diz se a mutação agendou;
+`api.flush_snapshot()` faz o que a thread do timer faria ao vencer o intervalo.
+
+O que é trocado é `provide_timer_factory`, e não `provide_snapshot_debouncer`.
+A diferença é o que separa a suíte de cobrir a RNF3 de fingir que cobre:
+substituindo o debouncer inteiro por um lambda, a memoização em `app.state` —
+que é o mecanismo do coalescing em produção — não era exercitada por nada, e um
+debouncer novo por requisição (zero coalescing) deixaria tudo verde. Com só o
+timer trocado, o `run`, a fábrica de sessões e a memoização são os de produção.
 
 Disparar o timer **depois** da resposta não é detalhe de conveniência: a tarefa
 de fundo roda antes de a requisição dar `commit` (ver `deps.py`), e é o atraso
@@ -33,19 +39,18 @@ from uuid import UUID
 
 import pytest
 from alembic import command
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlalchemy.pool import StaticPool
 
 from app.adapters.inbound.http.deps import (
-    get_session_factory,
     provide_clock,
-    provide_snapshot_debouncer,
-    snapshot_exporter,
+    provide_session_factory,
+    provide_timer_factory,
 )
 from app.adapters.inbound.http.main import API_PREFIX, create_app
 from app.adapters.outbound.persistence.session import make_engine, make_session_factory
-from app.adapters.outbound.snapshot.debounce import SnapshotDebouncer
 from app.config.settings import Settings
 from tests.domain.conftest import FrozenClock
 from tests.persistence.conftest import alembic_config
@@ -90,21 +95,30 @@ class Api:
     """
 
     def __init__(
-        self, client: TestClient, snapshot_dir: Path, snapshot_timers: TimerSpy
+        self,
+        app: FastAPI,
+        client: TestClient,
+        snapshot_dir: Path,
+        snapshot_timers: TimerSpy,
     ) -> None:
+        #: Exposto para o teste da RNF3 poder olhar `app.state`, que é onde o
+        #: debounce e a fábrica de sessões são memoizados.
+        self.app = app
         self.client = client
         #: A pasta que o export automático da RNF3 escreve.
         self.snapshot_dir = snapshot_dir
-        self._snapshot_timers = snapshot_timers
+        #: Todo timer que o debounce criou, na ordem. Contar timer é como
+        #: "coalescer" vira asserção em vez de cronômetro.
+        self.snapshot_timers = snapshot_timers
 
     @property
     def snapshot_scheduled(self) -> bool:
         """Se alguma requisição agendou o export automático (RNF3)."""
-        return bool(self._snapshot_timers.created)
+        return bool(self.snapshot_timers.created)
 
     def flush_snapshot(self) -> None:
         """Dispara o export agendado, como a thread do timer faria."""
-        self._snapshot_timers.pending.fire()
+        self.snapshot_timers.pending.fire()
 
     def get(self, path: str, **kwargs: Any) -> Any:
         return self.client.get(f"{API_PREFIX}{path}", **kwargs)
@@ -230,13 +244,9 @@ def api(
 ) -> Iterator[Api]:
     app = create_app(settings)
     factory = make_session_factory(engine)
-    app.dependency_overrides[get_session_factory] = lambda: factory
+    app.dependency_overrides[provide_session_factory] = lambda: factory
     app.dependency_overrides[provide_clock] = lambda: clock
     timers = TimerSpy()
-    debouncer = SnapshotDebouncer(
-        snapshot_exporter(factory=factory, directory=snapshot_dir, clock=clock),
-        timer_factory=timers,
-    )
-    app.dependency_overrides[provide_snapshot_debouncer] = lambda: debouncer
+    app.dependency_overrides[provide_timer_factory] = lambda: timers
     with TestClient(app) as client:
-        yield Api(client, snapshot_dir, timers)
+        yield Api(app, client, snapshot_dir, timers)

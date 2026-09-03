@@ -12,10 +12,14 @@ chamá-lo é a borda (§9).
 
 Duas escolhas com consequência visível:
 
-- **A thread não é `daemon`.** Um export pendente sobrevive ao `Ctrl+C`: o
-  interpretador espera a thread terminar. Na prática o desligamento pode
-  demorar até `delay` segundos, e é o preço de não perder a última alteração —
-  que é exatamente a que a pessoa acabou de fazer.
+- **A thread não é `daemon`, e isso precisa ser dito em código.** Um export
+  pendente sobrevive ao `Ctrl+C`: o interpretador espera a thread terminar. Na
+  prática o desligamento pode demorar até `delay` segundos, e é o preço de não
+  perder a última alteração — que é exatamente a que a pessoa acabou de fazer.
+  `Thread.daemon` **herda de quem cria a thread**, e quem cria esta é a tarefa
+  de fundo da requisição, que o Starlette roda numa worker do anyio — que é
+  daemon. Sem `durable_timer` abaixo, a promessa deste parágrafo era falsa e o
+  export dos últimos cinco segundos morria com o processo.
 - **A exceção do export não sobe.** Ela acontece numa thread, fora de qualquer
   requisição, e derrubar a thread em silêncio esconderia o problema: fica
   registrada no log e o próximo agendamento tenta de novo. Um export que falha
@@ -49,6 +53,20 @@ class Timer(Protocol):
 type TimerFactory = Callable[[float, Callable[[], None]], Timer]
 
 
+def durable_timer(delay: float, function: Callable[[], None]) -> Timer:
+    """`threading.Timer` que **não** herda o `daemon` de quem o criou.
+
+    É a fábrica default, e a única linha que a torna diferente de
+    `threading.Timer` é o `daemon = False` — ver o terceiro parágrafo do topo
+    do módulo. Como o timer nasce dentro de uma worker do anyio, o default
+    herdado é `True`, e um timer daemon é justamente o que a RNF3 não pode ter:
+    o interpretador não o espera.
+    """
+    timer = threading.Timer(delay, function)
+    timer.daemon = False
+    return timer
+
+
 class SnapshotDebouncer:
     """Um por processo, e um método público: `schedule()`.
 
@@ -61,7 +79,7 @@ class SnapshotDebouncer:
         run: Callable[[], None],
         *,
         delay: float = DEFAULT_DELAY,
-        timer_factory: TimerFactory = threading.Timer,
+        timer_factory: TimerFactory = durable_timer,
     ) -> None:
         self._run = run
         self._delay = delay
