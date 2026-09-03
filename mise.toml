@@ -89,12 +89,18 @@ description = "pytest + vitest"
 depends = ["test:py", "test:web"]
 
 [tasks."lint:py"]
-description = "ruff + mypy --strict no domínio e aplicação"
+# O `--strict` nos adapters não é o §11 pedindo (lá eles "podem ser menos
+# rígidos"): é o que dá dentes ao `Ports` de `http/deps.py`. Ele é o único
+# ponto do projeto em que uma implementação é atribuída a uma variável tipada
+# com o `Protocol` da porta, e portanto o único em que "o repositório cumpre a
+# porta" é verificado — o `isinstance` contra `Protocol` só olha nome de
+# atributo. Fora do escopo do mypy, o feixe não verificaria nada.
+description = "ruff + mypy --strict no domínio, na aplicação e nos adapters"
 dir = "{{config_root}}/backend"
 run = [
   "uv run ruff check .",
   "uv run ruff format --check .",
-  "uv run mypy --strict app/domain app/application",
+  "uv run mypy --strict app",
 ]
 
 [tasks."lint:web"]

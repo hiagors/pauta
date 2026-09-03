@@ -31,7 +31,12 @@ def contains_text(column: Mapped[str], query: str) -> ColumnElement[bool]:
     needle = query.strip().casefold()
     for special in (_LIKE_ESCAPE, "%", "_"):
         needle = needle.replace(special, _LIKE_ESCAPE + special)
-    return _casefold(column).like(f"%{needle}%", escape=_LIKE_ESCAPE)
+    # A anotação é explícita porque `_casefold` sai de um `getattr` e chega
+    # aqui como `Any` — sem ela o `--strict` reclama do retorno.
+    like: ColumnElement[bool] = _casefold(column).like(
+        f"%{needle}%", escape=_LIKE_ESCAPE
+    )
+    return like
 
 
 def any_of(column: Mapped[Any], values: Collection[Any]) -> ColumnElement[bool]:

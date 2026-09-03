@@ -67,6 +67,17 @@ from app.adapters.outbound.system_clock import SystemClock
 from app.application.use_cases.snapshots.export import ExportSnapshot
 from app.config.settings import Settings
 from app.domain.ports.clock import Clock
+from app.domain.ports.repositories import (
+    AllocationRepository,
+    InitiativeRepository,
+    MemberRepository,
+    MutedAlertRepository,
+    ProjectRepository,
+    SprintRepository,
+    SquadMembershipRepository,
+    SquadRepository,
+)
+from app.domain.ports.snapshot import SnapshotReader, SnapshotStore, SnapshotWriter
 
 #: Os métodos que mudam dado. O `GET` não agenda export (RNF3).
 MUTATING_METHODS: Final = frozenset({"POST", "PUT", "PATCH", "DELETE"})
@@ -149,20 +160,29 @@ class Ports:
     por requisição, não uma por repositório. Sem isso, o `flush` de um
     repositório não seria visto pela leitura seguinte de outro dentro do mesmo
     use case.
+
+    Os campos são tipados com os `Protocol` do domínio, e não com as classes
+    concretas do SQLAlchemy. Não é purismo: `build()` é o **único** ponto do
+    projeto em que uma implementação é atribuída a uma variável tipada com a
+    porta, e portanto o único em que o `mypy` confere que ela cumpre a
+    assinatura. Com as classes concretas aqui, nada — nem o type checker, nem
+    o `isinstance` contra `Protocol`, que só olha nome de atributo — verificava
+    isso em lugar nenhum. É por causa desta classe que `mise run lint` roda
+    `--strict` também em `app/adapters`.
     """
 
     clock: Clock
-    store: SqlAlchemySnapshotStore
-    writer: DirectorySnapshotWriter
-    reader: DirectorySnapshotReader
-    projects: SqlAlchemyProjectRepository
-    initiatives: SqlAlchemyInitiativeRepository
-    members: SqlAlchemyMemberRepository
-    squads: SqlAlchemySquadRepository
-    memberships: SqlAlchemySquadMembershipRepository
-    sprints: SqlAlchemySprintRepository
-    allocations: SqlAlchemyAllocationRepository
-    muted_alerts: SqlAlchemyMutedAlertRepository
+    store: SnapshotStore
+    writer: SnapshotWriter
+    reader: SnapshotReader
+    projects: ProjectRepository
+    initiatives: InitiativeRepository
+    members: MemberRepository
+    squads: SquadRepository
+    memberships: SquadMembershipRepository
+    sprints: SprintRepository
+    allocations: AllocationRepository
+    muted_alerts: MutedAlertRepository
 
     @classmethod
     def build(cls, *, session: Session, clock: Clock, snapshot_dir: Path) -> Self:

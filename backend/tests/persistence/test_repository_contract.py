@@ -16,6 +16,7 @@ ida e volta ao disco. Isso é `test_persistence.py`, porque não é contrato de
 porta e um fake não pode passar.
 """
 
+import inspect
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
@@ -48,16 +49,59 @@ from tests.domain.conftest import uid
 # --------------------------------------------------------------------------- #
 
 
-def test_every_repository_satisfies_its_port(repos: Repositories) -> None:
-    assert isinstance(repos.store, SnapshotStore)
-    assert isinstance(repos.projects, ProjectRepository)
-    assert isinstance(repos.initiatives, InitiativeRepository)
-    assert isinstance(repos.members, MemberRepository)
-    assert isinstance(repos.squads, SquadRepository)
-    assert isinstance(repos.memberships, SquadMembershipRepository)
-    assert isinstance(repos.sprints, SprintRepository)
-    assert isinstance(repos.allocations, AllocationRepository)
-    assert isinstance(repos.muted_alerts, MutedAlertRepository)
+#: Cada porta com o campo de `Repositories` que a implementa.
+PORTS: tuple[tuple[str, type], ...] = (
+    ("store", SnapshotStore),
+    ("projects", ProjectRepository),
+    ("initiatives", InitiativeRepository),
+    ("members", MemberRepository),
+    ("squads", SquadRepository),
+    ("memberships", SquadMembershipRepository),
+    ("sprints", SprintRepository),
+    ("allocations", AllocationRepository),
+    ("muted_alerts", MutedAlertRepository),
+)
+
+
+def _declared_methods(port: type) -> list[str]:
+    """Os métodos que a porta declara, sem os herdados de `Protocol`."""
+    return sorted(
+        name
+        for name, member in inspect.getmembers(port, inspect.isfunction)
+        if not name.startswith("_")
+    )
+
+
+@pytest.mark.parametrize(("field", "port"), PORTS, ids=[name for name, _ in PORTS])
+def test_every_repository_matches_the_signatures_of_its_port(
+    repos: Repositories, field: str, port: type
+) -> None:
+    """Assinatura por assinatura, e não `isinstance`.
+
+    Este teste já existiu como `isinstance(repos.projects, ProjectRepository)`,
+    e passava sem verificar nada: `isinstance` contra `Protocol`
+    `runtime_checkable` confere **só nome de atributo**. Uma classe com sete
+    métodos de nomes certos e assinaturas todas erradas era aceita.
+
+    O `mypy --strict` fechou metade do buraco quando `Ports` (`http/deps.py`)
+    passou a ser tipado com as portas — mas ele só vê `app/`, e os fakes desta
+    suíte moram em `tests/`. Esta parametrização é o que cobre os dois lados,
+    porque a fixture `repos` roda contra as duas implementações.
+    """
+    implementation = getattr(repos, field)
+    declared = _declared_methods(port)
+    assert declared, f"{port.__name__} não declara método nenhum"
+
+    for name in declared:
+        assert hasattr(implementation, name), (
+            f"{type(implementation).__name__} não tem `{name}`"
+        )
+        expected = inspect.signature(getattr(port, name))
+        actual = inspect.signature(getattr(type(implementation), name))
+        assert actual == expected, (
+            f"{type(implementation).__name__}.{name} diverge de "
+            f"{port.__name__}.{name}: {actual} != {expected}"
+        )
 
 
 def test_an_empty_id_collection_filters_everything_out(

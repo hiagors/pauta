@@ -17,6 +17,7 @@ anterior seria lido como plano vigente.
 """
 
 from collections import defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -204,7 +205,10 @@ def _cell(plan: _Plan, initiative_id: UUID, sprint_number: int) -> str:
     return "" if assignee is None else plan.name_of(assignee)
 
 
-def _table(header: tuple[str, ...], rows: list[tuple[str, ...]]) -> list[str]:
+def _table(header: tuple[str, ...], rows: Sequence[Sequence[str]]) -> list[str]:
+    """`Sequence` nas linhas, e não `list[tuple[str, ...]]`: `list` é
+    invariante, e uma lista de tuplas de quatro colunas — que é o que cada
+    chamada monta — não é atribuível a `list[tuple[str, ...]]`."""
     return [
         _row(header),
         _row(tuple("---" for _ in header)),
@@ -212,7 +216,7 @@ def _table(header: tuple[str, ...], rows: list[tuple[str, ...]]) -> list[str]:
     ]
 
 
-def _row(cells: tuple[str, ...]) -> str:
+def _row(cells: Sequence[str]) -> str:
     return "| " + " | ".join(_escape(cell) for cell in cells) + " |"
 
 
