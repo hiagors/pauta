@@ -2,7 +2,7 @@
 
 Soft delete e ponto: apagar fisicamente reescreveria alocações passadas. O
 inativo sai dos seletores da UI, continua no histórico, e os alertas param de
-considerá-lo (premissa A3 do §16). A composição de squad dele em sprints
+considerá-lo (RN-S3). A composição de squad dele em sprints
 futuras permanece no dado, como registro.
 """
 

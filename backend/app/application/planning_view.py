@@ -173,7 +173,7 @@ def load_snapshot(
 ) -> PlanningSnapshot:
     """A fotografia do plano na janela, pronta para `evaluate_alerts`.
 
-    `members` leva **apenas** os ativos: é a premissa A3 do §16 (quem é
+    `members` leva **apenas** os ativos: é a RN-S3 (quem é
     inativado só desaparece) implementada num lugar só, e é o que os dois
     alertas de membro do §7.3 pedem ao dizer "membro ativo". Alocação ou
     membership que aponte para alguém fora do mapa é ignorada pelo domínio.

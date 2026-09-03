@@ -67,7 +67,7 @@ def test_a_pause_in_the_middle_generates_two_bars(api: Api) -> None:
 
 
 def test_the_default_window_is_the_current_civil_quarter(api: Api) -> None:
-    """RN13, com a premissa A1 do §16 em vigor: trimestre civil.
+    """RN13: o trimestre é o **civil**.
 
     Hoje é 02/09/2026, então a janela é jul-set: entram a 18, a 19 e a 20, que
     começa em 28/09; a 21 já é de outubro.

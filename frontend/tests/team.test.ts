@@ -3,6 +3,7 @@ import type { MemberOut, SquadOut } from '../src/lib/api';
 import {
   compositionRows,
   currentMemberIds,
+  inactiveWithComposition,
   memberIdsAfterToggle,
   representativeIsAbsent,
   type SprintComposition,
@@ -115,10 +116,10 @@ describe('memberIdsAfterToggle', () => {
   });
 
   it('preserva a membership de quem foi inativado e não aparece na matriz', () => {
-    // Premissa A3 do §16: a membership fica no dado, como histórico. Montar a
+    // RN-S3: a membership fica no dado, como histórico. Montar a
     // lista a partir das caixas marcadas a apagaria em silêncio.
-    const gravado = [ana.id, diana.id];
-    expect(memberIdsAfterToggle(gravado, carla.id, true)).toEqual([
+    const stored = [ana.id, diana.id];
+    expect(memberIdsAfterToggle(stored, carla.id, true)).toEqual([
       ana.id,
       diana.id,
       carla.id,
@@ -143,5 +144,36 @@ describe('representativeIsAbsent', () => {
 
   it('cala quando nenhuma sprint começou (RN12)', () => {
     expect(representativeIsAbsent(alfa, WINDOW, null)).toBe(false);
+  });
+});
+
+describe('inactiveWithComposition', () => {
+  /* Diana foi inativada e continua na composição da Alfa na 20 (RN-S3). */
+  const withInactive: SprintComposition[] = [
+    { sprintNumber: 19, squads: [squad('Alfa', [ana])] },
+    { sprintNumber: 20, squads: [squad('Alfa', [ana, diana])] },
+  ];
+
+  it('acusa quem está inativa e ainda tem composição na janela', () => {
+    expect(inactiveWithComposition(withInactive, 'squad-Alfa')).toEqual(['Diana']);
+  });
+
+  it('não repete quem aparece em mais de uma sprint', () => {
+    const twice: SprintComposition[] = [
+      { sprintNumber: 19, squads: [squad('Alfa', [diana])] },
+      { sprintNumber: 20, squads: [squad('Alfa', [diana])] },
+    ];
+    expect(inactiveWithComposition(twice, 'squad-Alfa')).toEqual(['Diana']);
+  });
+
+  it('cala quando só há gente ativa', () => {
+    expect(inactiveWithComposition(WINDOW, 'squad-Alfa')).toEqual([]);
+  });
+
+  it('olha só a squad escolhida', () => {
+    const elsewhere: SprintComposition[] = [
+      { sprintNumber: 19, squads: [squad('Alfa', [ana]), squad('Beta', [diana])] },
+    ];
+    expect(inactiveWithComposition(elsewhere, 'squad-Alfa')).toEqual([]);
   });
 });

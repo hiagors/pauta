@@ -94,6 +94,20 @@ export function pluralize(
 }
 
 /**
+ * `"a"`, `"a e b"`, `"a, b e c"` — em português, sem vírgula antes do "e".
+ *
+ * A mesma regra que o `_join_names` do domínio aplica nas frases de alerta.
+ * Está repetida aqui, e não importada, porque o backend a usa para montar o
+ * `message` que já chega pronto: o front só precisa dela para as frases que
+ * **ele** escreve.
+ */
+export function joinNames(names: readonly string[]): string {
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0]!;
+  return `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;
+}
+
+/**
  * Cor de texto legível sobre um fundo `#RRGGBB`.
  *
  * A cor da barra da grade é escolhida no cadastro do projeto e pode ser

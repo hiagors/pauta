@@ -576,6 +576,14 @@ não estiver na squad na sprint atual, a UI mostra um aviso discreto — não um
 dispara `EMPTY_SQUAD` (informativo, nunca bloqueio) — planejar antes de contratar é
 legítimo.
 
+**RN-S3.** Inativar um membro **não** apaga a `SquadMembership` dele em sprints
+futuras: ela fica no dado, como histórico (§6.4). A matriz de composição desenha só
+quem está ativo, e as duas coisas juntas criam um ponto cego — composição gravada que
+ninguém vê, e que reaparece inteira no dia em que a pessoa for reativada. Por isso a
+matriz mostra um **aviso discreto** nomeando quem está inativo e ainda tem composição
+na janela. Aviso, não ação: a regra é preservar o dado, e oferecer um botão para apagá-lo
+contradiria a própria regra. Era a premissa A3 do §16, decidida em 03/09/2026.
+
 ### 6.6 `Sprint`
 
 `id` (UUID), `number` (int, único), `start_date`, `end_date`.
@@ -1403,12 +1411,14 @@ Registro das mudanças estruturais, para quem tiver lido a versão anterior.
 
 ## 16. Pontos abertos
 
-Três itens ainda não decididos. Nenhum bloqueia implementação: cada um tem uma
-premissa em vigor, que é o que o código deve seguir até haver decisão em contrário.
-Quando decidir, mova o item para §3 ou §7 e apague daqui.
+Nenhum. Os três que estavam aqui desde a revisão 2 foram decididos em 03/09/2026 e
+viraram regra:
 
-| # | Pergunta | Premissa em vigor | Quando dói |
+| # | Pergunta | Decisão | Onde está agora |
 |---|---|---|---|
-| A1 | "Trimestre corrente" (janela default da grade, RN13) é o trimestre **civil** (jan–mar, abr–jun, jul–set, out–dez) ou um trimestre fiscal deslocado? | Trimestre civil, derivado da data do `Clock` | Fase 7, ao abrir a grade. Trocar é uma função de domínio de três linhas |
-| A2 | `MEMBER_IDLE` precisa de teto? Nove membros × sete sprints futuras podem virar dezenas de itens informativos | Sem teto: toda sprint da atual em diante entra | Fase 8, quando o volume real aparece no painel. Candidato natural: limitar à sprint atual + as duas seguintes |
-| A3 | Membro inativado que ainda tem `SquadMembership` em sprint futura — a UI avisa, ou ele só desaparece? | Só desaparece: os alertas ignoram inativos e a membership fica no dado, como histórico | Fase 8. É um aviso a mais, não uma mudança de modelo |
+| A1 | "Trimestre corrente" (janela default da grade) é o civil ou um fiscal deslocado? | Civil: jan–mar, abr–jun, jul–set, out–dez, derivado da data do `Clock` | RN13 (§7.2) |
+| A2 | `MEMBER_IDLE` precisa de teto? | Sim: a sprint atual e as duas seguintes, horizonte absoluto que não se desloca com o filtro | §7.3 e `IDLE_HORIZON_SPRINTS` |
+| A3 | Membro inativado com `SquadMembership` em sprint futura — a UI avisa ou ele só desaparece? | Avisa, discreto e sem ação: a membership continua no dado, como histórico | RN-S3 (§6.5) |
+
+Um ponto aberto novo entra aqui com a mesma forma: a pergunta, a premissa que o código
+segue enquanto não há decisão, e quando ela passa a doer.

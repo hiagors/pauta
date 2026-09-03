@@ -91,7 +91,7 @@ class MembershipFact:
 class PlanningSnapshot:
     """Tudo o que o cálculo de alertas precisa, sem repositório.
 
-    `members` contém **apenas** os ativos: é assim que a premissa A3 do §16
+    `members` contém **apenas** os ativos: é assim que a RN-S3
     (inativo só desaparece) fica implementada num lugar só, e é o que os dois
     alertas de membro do §7.3 pedem ao dizer "membro ativo".
 
@@ -296,8 +296,8 @@ def propose_next_sprint(
 def civil_quarter_bounds(today: date) -> tuple[date, date]:
     """Trimestre **civil** que contém `today` (RN13).
 
-    Civil, e não fiscal deslocado: foi a decisão de 03/09/2026 que fechou a
-    premissa A1 do §16. Trocar é mexer só nesta função.
+    Civil, e não fiscal deslocado: decidido em 03/09/2026. Trocar por um
+    trimestre fiscal é mexer só nesta função.
     """
     quarter = (today.month - 1) // _MONTHS_PER_QUARTER
     first_month = quarter * _MONTHS_PER_QUARTER + 1

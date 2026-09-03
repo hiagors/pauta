@@ -33,9 +33,10 @@ function membersOf(composition: SprintComposition, squadId: string): readonly Me
 /**
  * Uma linha por pessoa, uma célula por sprint da janela.
  *
- * `members` é a lista que a tela mostra — as ativas, por §6.4 e pela premissa
- * A3 do §16. Quem foi inativado some daqui e **continua no dado**: quem
- * preserva isso é `memberIdsAfterToggle`, não esta função.
+ * `members` é a lista que a tela mostra — as ativas, por §6.4 e pela RN-S3.
+ * Quem foi inativado some daqui e **continua no dado**: quem preserva isso é
+ * `memberIdsAfterToggle`, não esta função — e quem avisa que existe é
+ * `inactiveWithComposition`.
  */
 export function compositionRows(
   members: readonly MemberOut[],
@@ -78,9 +79,10 @@ export function currentMemberIds(
  *
  * O `PUT` **substitui** a composição da sprint, então a lista precisa ser a
  * composição inteira — e não só quem a tela desenha. Uma pessoa inativada que
- * ainda tenha membership naquela sprint não aparece na matriz (premissa A3 do
- * §16); montar a lista a partir das caixas marcadas a apagaria em silêncio, e
- * a premissa diz o contrário: a membership fica, como histórico.
+ * ainda tenha membership naquela sprint não aparece na matriz (RN-S3); montar
+ * a lista a partir das caixas marcadas a apagaria em silêncio, e a regra diz o
+ * contrário: a membership fica, como histórico — e `inactiveWithComposition`
+ * avisa que ela está lá.
  */
 export function memberIdsAfterToggle(
   currentIds: readonly string[],
@@ -91,6 +93,33 @@ export function memberIdsAfterToggle(
     return currentIds.includes(memberId) ? [...currentIds] : [...currentIds, memberId];
   }
   return currentIds.filter((id) => id !== memberId);
+}
+
+/**
+ * Quem foi inativado e **ainda** tem composição na janela.
+ *
+ * A matriz só desenha pessoa ativa (§6.4), e a membership de quem saiu fica no
+ * dado como histórico — é o que `memberIdsAfterToggle` preserva. As duas
+ * coisas juntas criam um ponto cego: existe composição gravada que ninguém vê,
+ * e ela reaparece inteira no dia em que a pessoa for reativada.
+ *
+ * O aviso fecha esse ponto cego sem mudar o modelo: diz que o dado existe, e
+ * não oferece uma edição que a premissa manda não fazer.
+ *
+ * A resposta de `GET /squads?sprint_number=` traz a composição inteira, ativos
+ * e inativos — nenhuma chamada nova é preciso para saber isto.
+ */
+export function inactiveWithComposition(
+  window: readonly SprintComposition[],
+  squadId: string,
+): string[] {
+  const found = new Map<string, string>();
+  for (const composition of window) {
+    for (const member of membersOf(composition, squadId)) {
+      if (!member.is_active) found.set(member.id, member.name);
+    }
+  }
+  return [...found.values()].sort((left, right) => left.localeCompare(right, 'pt-BR'));
 }
 
 /**

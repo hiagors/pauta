@@ -7,6 +7,7 @@ import {
   formatDateRange,
   formatSprintRange,
   initials,
+  joinNames,
   pluralize,
   projectColor,
   readableTextOn,
@@ -117,5 +118,17 @@ describe('readableTextOn', () => {
 
   it('não quebra com valor fora do formato', () => {
     expect(readableTextOn('vermelho')).toBe('#FFFFFF');
+  });
+});
+
+describe('joinNames', () => {
+  it('não põe vírgula antes do "e"', () => {
+    expect(joinNames(['Ana'])).toBe('Ana');
+    expect(joinNames(['Ana', 'Bruno'])).toBe('Ana e Bruno');
+    expect(joinNames(['Ana', 'Bruno', 'Carla'])).toBe('Ana, Bruno e Carla');
+  });
+
+  it('devolve vazio sem nome nenhum', () => {
+    expect(joinNames([])).toBe('');
   });
 });

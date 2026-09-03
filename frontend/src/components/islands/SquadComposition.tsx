@@ -1,9 +1,11 @@
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, type MemberOut, type SquadOut } from '../../lib/api';
+import { joinNames } from '../../lib/format';
 import {
   compositionRows,
   currentMemberIds,
+  inactiveWithComposition,
   memberIdsAfterToggle,
   representativeIsAbsent,
   type SprintComposition,
@@ -63,7 +65,7 @@ export function SquadComposition({
   /**
    * O `PUT` **substitui** a composição da sprint, então manda a lista inteira
    * — e ela sai do que está gravado, não das caixas marcadas. Quem foi
-   * inativado não aparece na matriz (premissa A3 do §16) e continua no dado.
+   * inativado não aparece na matriz (RN-S3) e continua no dado.
    */
   const toggle = useMutation({
     mutationFn: (input: { sprintNumber: number; memberId: string; present: boolean }) =>
@@ -104,6 +106,7 @@ export function SquadComposition({
 
   const rows = compositionRows(members, squad.id, window);
   const absentRepresentative = representativeIsAbsent(squad, window, currentSprintNumber);
+  const inactive = inactiveWithComposition(window, squad.id);
 
   return (
     <div className="flex flex-col gap-2">
@@ -112,6 +115,20 @@ export function SquadComposition({
         // legitimamente não executar nada na squad.
         <p className="m-0 text-12 text-warning">
           O representante desta squad não está na composição da sprint atual.
+        </p>
+      )}
+
+      {inactive.length > 0 && (
+        // RN-S3: a matriz só desenha pessoa ativa e a membership de quem saiu
+        // fica no dado como histórico. Sem este aviso existiria composição
+        // gravada que ninguém vê — e que reaparece inteira se a pessoa for
+        // reativada. Discreto e sem ação: a regra manda preservar o dado.
+        <p className="m-0 text-12 text-text-subtle">
+          {joinNames(inactive)}{' '}
+          {inactive.length === 1
+            ? 'está inativa e ainda tem composição'
+            : 'estão inativas e ainda têm composição'}{' '}
+          nesta janela. A membership fica como histórico e não aparece na matriz.
         </p>
       )}
 

@@ -31,7 +31,7 @@ def test_an_active_member_with_no_front_is_reported_as_idle(api: Api) -> None:
 
 
 def test_an_inactive_member_is_not_reported_as_idle(api: Api) -> None:
-    """Premissa A3 do §16: os alertas ignoram inativos."""
+    """§7.3: os quatro alertas qualificam o sujeito com "ativo"."""
     api.sprints()
     diana = api.member("Diana")
     api.delete(f"/members/{diana['id']}")

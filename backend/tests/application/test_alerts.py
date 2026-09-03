@@ -4,9 +4,9 @@ Os cenários A a G do §13.1 aparecem aqui como fixtures de teste, do jeito que
 o spec manda — não existe `seed`, e nada disso é dado pré-cadastrado.
 
 As asserções filtram por tipo de alerta de propósito: `MEMBER_IDLE` fala de
-toda pessoa ativa sem frente em toda sprint da atual em diante (premissa A2 do
-§16), então quase todo cenário produz alguns, e checar a lista inteira faria o
-teste falar de outra regra que não a dele.
+toda pessoa ativa sem frente na sprint atual e nas duas seguintes (§7.3),
+então quase todo cenário produz alguns, e checar a lista inteira faria o teste
+falar de outra regra que não a dele.
 """
 
 import pytest
@@ -157,7 +157,7 @@ def test_scenario_e_a_member_without_a_front_in_a_future_sprint_is_idle(
 
 
 def test_an_inactive_member_is_never_idle(world: World, fakes: Fakes) -> None:
-    """Premissa A3 do §16: quem é inativado só desaparece."""
+    """RN-S3: quem é inativado sai dos alertas; a membership fica no dado."""
     world.sprints(18, 19)
     world.member("Ana", active=False)
 

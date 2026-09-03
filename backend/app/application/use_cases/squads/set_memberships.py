@@ -69,7 +69,7 @@ class SetSquadMemberships:
         """Existir é exigido; estar ativo não.
 
         O §6.4 diz que o inativo desaparece dos seletores, então a UI não
-        oferece; e o §16 (premissa A3) diz que membership de inativo fica no
+        oferece; e a RN-S3 diz que membership de inativo fica no
         dado como histórico. Recusar aqui seria inventar regra que o spec não
         pede.
         """

@@ -117,8 +117,8 @@ export function alertContext(alert: AlertOut): AlertContext {
  * onde a API manda tipo sem severidade: `alerts_by_sprint` da grade (§8), que
  * é uma lista de tipos por sprint. Sem ela, o ícone da coluna sairia vermelho
  * para `MEMBER_IDLE`, que é informação, e o vermelho pararia de significar
- * alguma coisa: com o time inteiro, quase toda sprint futura tem uma pessoa
- * sem frente (premissa A2 do §16).
+ * alguma coisa: com o time inteiro, quase toda sprint do horizonte tem uma
+ * pessoa sem frente (§7.3).
  */
 export const ALERT_TYPE_SEVERITY: Record<AlertType, Schemas['Severity']> = {
   SQUAD_OVERLOADED: 'WARNING',
