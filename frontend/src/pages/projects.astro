@@ -1,0 +1,15 @@
+---
+import RouteSummary from '../components/islands/RouteSummary';
+import PageHeader from '../components/layout/PageHeader.astro';
+import AppShell from '../layouts/AppShell.astro';
+---
+
+<AppShell title="Projetos">
+  <PageHeader
+    title="Projetos"
+    description="Projetos e as iniciativas de cada um. Projeto agrupa; iniciativa é a unidade de trabalho."
+  />
+  <div class="px-5 pb-5">
+    <RouteSummary route="projects" client:load />
+  </div>
+</AppShell>

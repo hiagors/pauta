@@ -1,0 +1,37 @@
+---
+/**
+ * Topbar de 56px com busca e o sino de alertas (§10.1).
+ *
+ * A busca está desenhada e **não está ligada**: os filtros e o `?q=` persistido
+ * na URL são das telas de planejamento (§10.3), que são a Fase 7. Está marcada
+ * como `disabled` de propósito — um campo que aceita texto e não faz nada é
+ * pior que um campo visivelmente indisponível. Consta no relatório da fase.
+ */
+import AlertBell from '../islands/AlertBell';
+---
+
+<header
+  class="sticky top-0 z-20 flex h-topbar shrink-0 items-center gap-4 border-b border-border bg-surface px-4"
+>
+  <div class="relative w-[320px] max-w-[40vw]">
+    <svg
+      class="icon pointer-events-none absolute top-2 left-2 size-4 text-text-disabled"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <use href="#icon-search"></use>
+    </svg>
+    <input
+      type="search"
+      disabled
+      placeholder="Buscar"
+      title="A busca entra junto com os filtros das telas de planejamento.""
+      aria-label="Buscar"
+      class="h-8 w-full rounded-sm border border-border-strong bg-surface pr-2 pl-7 text-14 text-text placeholder:text-text-disabled disabled:bg-neutral-soft disabled:text-text-disabled"
+    />
+  </div>
+
+  <div class="ml-auto flex items-center gap-2">
+    <AlertBell client:load />
+  </div>
+</header>

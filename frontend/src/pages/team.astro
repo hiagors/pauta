@@ -1,0 +1,15 @@
+---
+import RouteSummary from '../components/islands/RouteSummary';
+import PageHeader from '../components/layout/PageHeader.astro';
+import AppShell from '../layouts/AppShell.astro';
+---
+
+<AppShell title="Time">
+  <PageHeader
+    title="Time"
+    description="Pessoas, squads e a composição de cada squad sprint por sprint."
+  />
+  <div class="px-5 pb-5">
+    <RouteSummary route="team" client:load />
+  </div>
+</AppShell>

@@ -31,7 +31,7 @@ divergirem, o spec vence.
 - `mise run setup` — prepara a máquina do zero
 - `mise run dev` — sobe API (:8000) e front (:4321)
 - `mise run test` — pytest + vitest
-- `mise run lint` — ruff + mypy --strict
+- `mise run lint` — ruff + mypy --strict (backend) + tsc --noEmit (front)
 - `mise run types` — regenera os tipos do front a partir do OpenAPI
 
 ## Estado
@@ -44,8 +44,9 @@ Três pontos menores seguem abertos, com premissa em vigor documentada na seçã
 do spec — siga a premissa, não pergunte de novo.
 
 Fases concluídas: **0** (scaffold), **1** (domínio puro), **2** (use cases com
-repositórios fake), **3** (persistência em SQLite), **4** (API HTTP) e **5**
-(CLI + snapshot). Próxima: **Fase 6** (shell do front, seção 13 do spec).
+repositórios fake), **3** (persistência em SQLite), **4** (API HTTP), **5**
+(CLI + snapshot), **6** (shell do front) e **7** (planejamento e backlog).
+Próxima: **Fase 8** (projetos, time, sprints e painel de alertas, seção 10.3).
 
 Todos os endpoints da seção 8 existem, `/snapshots` inclusive. A lista vive em
 `tests/http/test_app.py` e é conferida nas duas direções — falta e excesso.
@@ -131,3 +132,74 @@ final: `import` é palavra reservada e `from ... import import` não existe.
 No `.gitignore`, `/data/` e `/snapshots/` são ancorados na raiz. Sem a barra
 inicial o padrão casa com qualquer nível, e `snapshots/` escondia do Git o
 pacote `application/use_cases/snapshots/`.
+
+## Front (Fase 6)
+
+`lib/api.ts` é o único lugar que chama `fetch`. Os tipos vêm de `lib/types.ts`,
+gerado por `mise run types` **com a API no ar** — o comando lê
+`http://127.0.0.1:8000/api/v1/openapi.json`, não um arquivo.
+
+`QueryOf<K>` e `BodyOf<K>` do `api.ts` leem `operations[K]` do OpenAPI em vez de
+repetir a lista de filtros. Filtro novo no backend chega ao front regerando os
+tipos, sem editar o cliente.
+
+Cada ilha do Astro é uma raiz React própria e precisa do seu provider; o
+`QueryClient` é um só por página. É o que `withQuery()` (`lib/query.ts`) resolve.
+`query.ts` usa `createElement` em vez de JSX porque a estrutura da seção 5 pede
+`.ts`, não `.tsx`.
+
+Ícone de sprite: o traço mora na classe `.icon` do `global.css`, não em atributo
+no `<symbol>`. `<use>` clona o conteúdo para uma shadow tree e herda as
+**propriedades CSS** do `<svg>` que referencia, não os atributos de apresentação
+do `<svg>` de origem — sem a classe todo ícone sai preenchido de preto.
+
+O estado colapsado da sidebar é `data-sidebar="collapsed"` no `<html>`, aplicado
+por um script `is:inline` no `<head>` do `AppShell`. Num `useEffect` a barra
+abriria em 240px e encolheria na frente do usuário a cada carga.
+
+`formatDate` corta a string ISO em vez de usar `new Date(iso)`: o construtor lê
+data simples como UTC e, em UTC-3, 31/08 volta como 30/08.
+
+`mise exec` **sobrescreve** as variáveis do `[env]` do `mise.toml`. Para rodar a
+API contra um banco descartável, chame `backend/.venv/bin/uvicorn` direto com
+`DATABASE_URL` e `SNAPSHOT_DIR` no comando — com `mise exec` o dado de teste vai
+parar em `data/pauta.sqlite` e em `snapshots/`.
+
+## Planejamento (Fase 7)
+
+A grade e a lista leem a **mesma** resposta de `GET /planning/grid`. Alternar
+Grade|Lista não custa requisição, e a lista não tem endpoint próprio: barra é
+exatamente "responsável, sprint inicial, sprint final".
+
+A grade só traz iniciativa que tem alocação na janela (`get_grid` parte das
+`allocations`). Iniciativa nova aparece lá **depois** de alocada, e o caminho
+para alocá-la é o botão "Alocar" do backlog.
+
+Não existe endpoint de mover alocação (§8). "Mover" e "Estender até" são
+`POST /allocations` no intervalo novo e `DELETE /allocations` na sobra —
+`rangeLeftovers` calcula a sobra, em até dois pedaços. A ordem é obrigatória:
+criar primeiro (RN1 é idempotente), apagar depois. Invertida, uma falha no meio
+deixaria a iniciativa sem alocação nenhuma.
+
+Uma linha da lista é uma **barra**, não uma iniciativa: quem troca de
+responsável no meio da janela aparece duas vezes.
+
+A grade é um `grid` CSS único do cabeçalho à última linha, com uma faixa
+`minmax(0, 1fr)` no fim para as linhas não pararem no meio do cartão. A
+marcação da sprint atual é um `<div>` absoluto atrás do grid, posicionado com
+as mesmas constantes `LEAD_WIDTH`/`COLUMN_WIDTH` do `grid-template-columns` —
+tingir só o cabeçalho sumiria ao rolar.
+
+`alerts_by_sprint` não é afetado pelos filtros, por contrato (§8). O ícone no
+cabeçalho da coluna continua igual com a grade filtrada em uma linha só; há
+teste manual disso no fim da fase.
+
+O filtro vive na URL (`lib/url-state.ts`), com `replaceState`: mexer em filtro
+não é navegar. O hook devolve `mounted` como terceiro item porque o Astro
+renderiza a ilha no build, onde não há `location` — quem chama segura o
+esqueleto até ele virar `true`, senão o HTML do build diverge do primeiro
+render do cliente.
+
+Verificação de interação sem dependência nova: Chrome com
+`--remote-debugging-port` e um script Node no scratchpad falando CDP pelo
+`WebSocket` global do Node 24. Não entra `puppeteer` no projeto.

@@ -1,0 +1,72 @@
+/* Tokens do §10.2 do spec.
+ *
+ * No Tailwind v4 a configuração é o CSS: declarar dentro de `@theme` é o que
+ * faz os utilitários existirem. Um `:root { --x: … }` puro não gera utilitário
+ * nenhum — por isso este arquivo, e não uma folha de variáveis solta.
+ *
+ * A fonte entra como pacote self-hosted (RNF6 proíbe chamada externa); nada de
+ * Google Fonts. Os `@import` vêm antes de qualquer regra, como o CSS exige.
+ */
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+@theme {
+  /* neutros — a base cinza-azulada é o que faz "parecer Jira" */
+  --color-bg:            #F7F8F9;
+  --color-surface:       #FFFFFF;
+  --color-border:        #DFE1E6;
+  --color-border-strong: #C1C7D0;
+  --color-text:          #172B4D;
+  --color-text-subtle:   #626F86;
+  --color-text-disabled: #A5ADBA;
+
+  /* ação */
+  --color-primary:       #0052CC;
+  --color-primary-hover: #0065FF;
+  --color-primary-soft:  #DEEBFF;
+
+  /* semânticos, usados nos lozenges e alertas */
+  --color-success:       #216E4E;
+  --color-success-soft:  #DCFFF1;
+  --color-warning:       #974F0C;
+  --color-warning-soft:  #FFF7D6;
+  --color-danger:        #AE2E24;
+  --color-danger-soft:   #FFECEB;
+  --color-neutral-soft:  #F1F2F4;
+
+  /* cor default de projeto sem cor definida (DEFAULT_PROJECT_COLOR) */
+  --color-project-default: #7A869A;
+
+  /* tipografia */
+  --font-sans: "Inter Variable", ui-sans-serif, -apple-system, "Segoe UI", Roboto,
+               sans-serif;
+  --text-11: 0.6875rem;
+  --text-12: 0.75rem;
+  --text-14: 0.875rem;
+  --text-16: 1rem;
+  --text-20: 1.25rem;
+  --text-24: 1.5rem;
+
+  /* espaço — grade de 4px */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 24px;
+  --spacing-6: 32px;
+
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+
+  --shadow-overlay: 0 4px 8px -2px rgba(9,30,66,.25), 0 0 1px rgba(9,30,66,.31);
+}
+
+@theme {
+  /* Medidas do shell (§10.1). Ficam aqui, e não espalhadas em cada regra, para
+   * que a sidebar colapsada seja uma troca de token e não uma busca por 64px. */
+  --spacing-sidebar:           240px;
+  --spacing-sidebar-collapsed: 64px;
+  --spacing-topbar:            56px;
+  --spacing-row:               40px;
+}

@@ -1,0 +1,54 @@
+---
+/**
+ * Shell da aplicação: sidebar + topbar (§5, §10.1).
+ *
+ * Toda página passa por aqui. O `output: 'static'` do §10.4 vale: este arquivo
+ * gera HTML no build, e o único JavaScript que sai daqui é o script do tema da
+ * sidebar e as ilhas React marcadas com `client:*`.
+ */
+import Icons from '../components/layout/Icons.astro';
+import Sidebar from '../components/layout/Sidebar.astro';
+import TopBar from '../components/layout/TopBar.astro';
+import '../styles/global.css';
+
+interface Props {
+  /** Vira o `<title>` da aba, sempre com o nome do sistema atrás. */
+  title: string;
+}
+
+const { title } = Astro.props;
+const pathname = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · Pauta</title>
+    <script is:inline>
+      // Aplica a escolha da sidebar antes da primeira pintura. Se isto virasse
+      // um `useEffect`, a barra abriria em 240px e encolheria na frente do
+      // usuário a cada carga de página.
+      try {
+        if (localStorage.getItem('pauta:sidebar') === 'collapsed') {
+          document.documentElement.dataset.sidebar = 'collapsed';
+        }
+      } catch {
+        // Armazenamento bloqueado: fica expandida, que é o default.
+      }
+    </script>
+  </head>
+  <body class="bg-bg text-text">
+    <Icons />
+    <div class="flex min-h-dvh">
+      <Sidebar pathname={pathname} />
+      <div class="flex min-w-0 flex-1 flex-col">
+        <TopBar />
+        <main class="min-w-0 flex-1">
+          <slot />
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

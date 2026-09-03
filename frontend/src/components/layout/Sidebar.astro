@@ -1,0 +1,107 @@
+---
+/**
+ * Sidebar do §10.1: 240px fixa, colapsável para 64px, navegação por seção.
+ *
+ * Os ícones são SVG inline desenhados aqui. Nada de biblioteca de ícone: não
+ * está no §4.1, e os assets da Atlassian estão explicitamente proibidos (§10.1).
+ */
+interface Props {
+  /** Caminho da rota atual, para marcar o item ativo. */
+  pathname: string;
+}
+
+const { pathname } = Astro.props;
+
+/** As cinco rotas do §5. `id` casa com o `<symbol>` do sprite abaixo. */
+const items = [
+  { href: '/planning', label: 'Planejamento', icon: 'grid' },
+  { href: '/backlog', label: 'Backlog', icon: 'list' },
+  { href: '/projects', label: 'Projetos', icon: 'folder' },
+  { href: '/team', label: 'Time', icon: 'people' },
+  { href: '/sprints', label: 'Sprints', icon: 'calendar' },
+] as const;
+
+const isActive = (href: string) => pathname === href || pathname === `${href}/`;
+---
+
+<aside
+  class="shell-sidebar sticky top-0 flex h-dvh shrink-0 flex-col border-r border-border bg-surface"
+>
+  <div class="flex h-topbar items-center gap-2 px-3">
+    <span
+      class="inline-flex size-6 shrink-0 items-center justify-center rounded-sm bg-primary text-11 font-semibold text-white"
+      aria-hidden="true">P</span
+    >
+    <span class="shell-sidebar-label text-16 font-semibold">Pauta</span>
+  </div>
+
+  <nav aria-label="Seções" class="flex flex-col gap-px p-2">
+    {
+      items.map((item) => (
+        <a
+          href={item.href}
+          title={item.label}
+          aria-current={isActive(item.href) ? 'page' : undefined}
+          class:list={[
+            'shell-sidebar-item flex h-8 items-center gap-3 rounded-sm px-2 text-14 no-underline',
+            isActive(item.href)
+              ? 'bg-primary-soft font-semibold text-primary'
+              : 'text-text hover:bg-neutral-soft',
+          ]}
+        >
+          <svg class="icon size-4 shrink-0" aria-hidden="true" focusable="false">
+            <use href={`#icon-${item.icon}`} />
+          </svg>
+          <span class="shell-sidebar-label truncate">{item.label}</span>
+        </a>
+      ))
+    }
+  </nav>
+
+  <div class="mt-auto p-2">
+    <button
+      type="button"
+      data-sidebar-toggle
+      class="shell-sidebar-item flex h-8 w-full items-center gap-3 rounded-sm px-2 text-12 text-text-subtle hover:bg-neutral-soft hover:text-text"
+    >
+      <svg class="icon size-4 shrink-0" aria-hidden="true" focusable="false">
+        <use href="#icon-collapse"></use>
+      </svg>
+      <span class="shell-sidebar-label">Recolher</span>
+    </button>
+  </div>
+</aside>
+
+<script>
+  // Alterna o estado e grava a escolha. Quem aplica antes da primeira pintura é
+  // o script inline do <head> do AppShell — este só reage ao clique.
+  const KEY = 'pauta:sidebar';
+  const root = document.documentElement;
+  const button = document.querySelector<HTMLButtonElement>('[data-sidebar-toggle]');
+
+  function sync() {
+    const collapsed = root.dataset.sidebar === 'collapsed';
+    button?.setAttribute('aria-expanded', String(!collapsed));
+    button?.setAttribute('title', collapsed ? 'Expandir a barra lateral' : 'Recolher a barra lateral');
+    const label = button?.querySelector('.shell-sidebar-label');
+    if (label) label.textContent = collapsed ? 'Expandir' : 'Recolher';
+  }
+
+  button?.addEventListener('click', () => {
+    const collapsed = root.dataset.sidebar === 'collapsed';
+    if (collapsed) {
+      delete root.dataset.sidebar;
+    } else {
+      root.dataset.sidebar = 'collapsed';
+    }
+    try {
+      localStorage.setItem(KEY, collapsed ? 'expanded' : 'collapsed');
+    } catch {
+      // Navegador com armazenamento bloqueado: a sessão atual continua
+      // funcionando, só não lembra a escolha na próxima carga.
+    }
+    sync();
+  });
+
+  sync();
+</script>

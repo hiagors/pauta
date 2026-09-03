@@ -66,7 +66,7 @@ run = "pnpm vitest run"
 description = "pytest + vitest"
 depends = ["test:py", "test:web"]
 
-[tasks.lint]
+[tasks."lint:py"]
 description = "ruff + mypy --strict no domínio e aplicação"
 dir = "{{config_root}}/backend"
 run = [
@@ -74,6 +74,18 @@ run = [
   "uv run ruff format --check .",
   "uv run mypy --strict app/domain app/application",
 ]
+
+[tasks."lint:web"]
+# O cliente de `lib/api.ts` só é "tipado" se alguém conferir os tipos. O `tsc`
+# cobre `.ts` e `.tsx`; os `.astro` ficam de fora — checá-los pediria o
+# `@astrojs/check`, que não está no §4.1.
+description = "tsc --noEmit no front"
+dir = "{{config_root}}/frontend"
+run = "pnpm typecheck"
+
+[tasks.lint]
+description = "ruff + mypy --strict + tsc"
+depends = ["lint:py", "lint:web"]
 
 [tasks.fmt]
 dir = "{{config_root}}/backend"

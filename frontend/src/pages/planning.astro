@@ -1,0 +1,15 @@
+---
+import Planning from '../components/islands/Planning';
+import PageHeader from '../components/layout/PageHeader.astro';
+import AppShell from '../layouts/AppShell.astro';
+---
+
+<AppShell title="Planejamento">
+  <PageHeader
+    title="Planejamento"
+    description="A grade e a lista das iniciativas alocadas. Janela default: o trimestre corrente (RN13)."
+  />
+  <div class="px-5 pb-5">
+    <Planning client:load />
+  </div>
+</AppShell>

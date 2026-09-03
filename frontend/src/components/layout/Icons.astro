@@ -1,0 +1,51 @@
+---
+/**
+ * Sprite de ícones do shell.
+ *
+ * Desenhados à mão em SVG: o §4.1 não traz biblioteca de ícone e o §10.1 proíbe
+ * os assets da Atlassian. Um `<symbol>` por ícone, referenciado por
+ * `<use href="#icon-…">`, para o mesmo traço não se repetir em cada link.
+ *
+ * Todos em grade de 16px. O traço não está aqui: quem desenha é a classe
+ * `.icon` (`global.css`), aplicada no `<svg>` que referencia — `<use>` clona o
+ * conteúdo para uma shadow tree e herda o CSS de lá, não os atributos daqui.
+ */
+---
+
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <symbol id="icon-grid" viewBox="0 0 16 16">
+    <rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.25"></rect>
+    <path d="M1.75 6.25h12.5M6.25 6.25v7"></path>
+  </symbol>
+  <symbol id="icon-list" viewBox="0 0 16 16">
+    <path d="M5.5 4h8.75M5.5 8h8.75M5.5 12h8.75M2 4h.01M2 8h.01M2 12h.01"></path>
+  </symbol>
+  <symbol id="icon-folder" viewBox="0 0 16 16">
+    <path d="M1.75 4.25c0-.83.67-1.5 1.5-1.5h2.4c.4 0 .78.16 1.06.44l.85.85h6.19c.83 0 1.5.67 1.5 1.5v6.2c0 .82-.67 1.5-1.5 1.5H3.25c-.83 0-1.5-.68-1.5-1.5z"></path>
+  </symbol>
+  <symbol id="icon-people" viewBox="0 0 16 16">
+    <circle cx="6.25" cy="5.5" r="2.5"></circle>
+    <path d="M1.75 13.25a4.5 4.5 0 0 1 9 0"></path>
+    <path d="M10.75 3.2a2.5 2.5 0 0 1 0 4.6M11.75 9.4a4.5 4.5 0 0 1 2.5 3.85"></path>
+  </symbol>
+  <symbol id="icon-calendar" viewBox="0 0 16 16">
+    <rect x="1.75" y="3.25" width="12.5" height="11" rx="1.25"></rect>
+    <path d="M1.75 6.75h12.5M5 1.75v3M11 1.75v3"></path>
+  </symbol>
+  <symbol id="icon-collapse" viewBox="0 0 16 16">
+    <rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.25"></rect>
+    <path d="M6.25 2.75v10.5"></path>
+  </symbol>
+  <symbol id="icon-search" viewBox="0 0 16 16">
+    <circle cx="7.25" cy="7.25" r="4.5"></circle>
+    <path d="m10.5 10.5 3 3"></path>
+  </symbol>
+  <symbol id="icon-bell" viewBox="0 0 16 16">
+    <path d="M8 1.75a4.25 4.25 0 0 0-4.25 4.25c0 3-1.25 4-1.25 4h11s-1.25-1-1.25-4A4.25 4.25 0 0 0 8 1.75Z"></path>
+    <path d="M6.5 12.5a1.75 1.75 0 0 0 3 0"></path>
+  </symbol>
+  <symbol id="icon-warning" viewBox="0 0 16 16">
+    <path d="M8 2.25 14.75 13.75H1.25z"></path>
+    <path d="M8 6.5v3.25M8 11.75h.01"></path>
+  </symbol>
+</svg>

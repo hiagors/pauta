@@ -1,0 +1,15 @@
+---
+import BacklogTable from '../components/islands/BacklogTable';
+import PageHeader from '../components/layout/PageHeader.astro';
+import AppShell from '../layouts/AppShell.astro';
+---
+
+<AppShell title="Backlog">
+  <PageHeader
+    title="Backlog"
+    description="Iniciativas em BACKLOG, sem as de projeto de reserva de capacidade."
+  />
+  <div class="px-5 pb-5">
+    <BacklogTable client:load />
+  </div>
+</AppShell>

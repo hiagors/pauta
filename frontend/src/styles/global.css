@@ -1,0 +1,87 @@
+/* Base do documento. Os tokens vêm antes porque as regras abaixo os usam. */
+@import "./tokens.css";
+
+/* Só o que vale para o documento inteiro. Aparência de componente mora no
+ * componente — o que estiver aqui é difícil de sobrescrever depois. */
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-text);
+    background-color: var(--color-bg);
+    /* 14px é o corpo de texto do §10.2; o resto da escala é relativo a ele. */
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  /* Foco sempre visível (§10.5, acessibilidade de base). O anel é o mesmo em
+   * todo controle para que teclado e mouse contem a mesma história. */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Sem `text-transform: uppercase` em rótulo e sem gradiente (§10.2). */
+  h1, h2, h3, h4 {
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+/* Animação só como resposta a ação do usuário, e nem isso quando o sistema
+ * pede para reduzir movimento (§10.5). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Shell (§10.1). Fica aqui, e não no componente, porque o estado colapsado é um
+ * atributo no `<html>`: um `<style>` com escopo do Astro não alcançaria a raiz.
+ *
+ * A largura é token (`--spacing-sidebar`), então colapsar é trocar um valor —
+ * não caçar 64px espalhado por três arquivos. */
+@layer components {
+  /* Ícones do sprite (`components/layout/Icons.astro`).
+   *
+   * O traço vive aqui, e não no `<symbol>`: `<use>` clona o conteúdo para uma
+   * shadow tree, que **não** herda os atributos de apresentação do `<svg>` de
+   * origem — herda as propriedades CSS do `<svg>` que referencia. Sem esta
+   * classe todo ícone sai preenchido de preto, que foi exatamente o que
+   * aconteceu na primeira montagem do shell. */
+  .icon {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+@layer components {
+  .shell-sidebar {
+    width: var(--spacing-sidebar);
+  }
+
+  :root[data-sidebar="collapsed"] .shell-sidebar {
+    width: var(--spacing-sidebar-collapsed);
+  }
+
+  /* O rótulo some, o ícone fica — e o `title` do link continua dizendo o nome. */
+  :root[data-sidebar="collapsed"] .shell-sidebar-label {
+    display: none;
+  }
+
+  :root[data-sidebar="collapsed"] .shell-sidebar-item {
+    justify-content: center;
+  }
+}
