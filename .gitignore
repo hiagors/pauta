@@ -19,6 +19,10 @@ __pycache__/
 dist/
 .astro/
 
+# lixo do Finder do macOS. Não é ignorado globalmente na máquina de todo mundo,
+# e cada `git status` com um deles no meio treina a ignorar `git status`.
+.DS_Store
+
 # local do agente
 CLAUDE.local.md
 .claude/settings.local.json
