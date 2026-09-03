@@ -45,8 +45,9 @@ do spec — siga a premissa, não pergunte de novo.
 
 Fases concluídas: **0** (scaffold), **1** (domínio puro), **2** (use cases com
 repositórios fake), **3** (persistência em SQLite), **4** (API HTTP), **5**
-(CLI + snapshot), **6** (shell do front) e **7** (planejamento e backlog).
-Próxima: **Fase 8** (projetos, time, sprints e painel de alertas, seção 10.3).
+(CLI + snapshot), **6** (shell do front), **7** (planejamento e backlog) e **8**
+(projetos, time, sprints e painel de alertas). Próxima: **Fase 9** (acabamento:
+estados vazio/erro/carregando, atalhos de teclado, README de uso).
 
 Todos os endpoints da seção 8 existem, `/snapshots` inclusive. A lista vive em
 `tests/http/test_app.py` e é conferida nas duas direções — falta e excesso.
@@ -203,6 +204,61 @@ render do cliente.
 Verificação de interação sem dependência nova: Chrome com
 `--remote-debugging-port` e um script Node no scratchpad falando CDP pelo
 `WebSocket` global do Node 24. Não entra `puppeteer` no projeto.
+
+## Projetos, time, sprints e alertas (Fase 8)
+
+`Drawer` (`ui/Drawer.tsx`) é o mesmo `<dialog>` do `Modal`, preso à direita: a
+armadilha de foco, o `Esc` e o `inert` vêm do navegador. O flex é `open:flex`, e
+não `flex` na classe — `<dialog>` fechado é `display: none` pela folha do
+navegador, e um `flex` fixo venceria essa regra: o painel apareceria aberto.
+
+O sino chama `/alerts` com `include_muted=true`, uma vez. O contador filtra
+`WARNING` não silenciado do mesmo dado (`warningCount`), e o painel precisa dos
+silenciados **com** `mute_id` e `mute_reason` para oferecer "Reativar". Duas
+chamadas dariam dois caches para a mesma janela.
+
+O link de cada alerta aponta para a tela onde ele **se resolve**, não para onde
+ele apareceu (`alertContext`): sobrecarga e ociosidade viram planejamento
+filtrado naquela sprint; conflito e squad vazia viram a matriz do time. Por isso
+`MEMBER_CONFLICT` aponta para uma das squads do `entity_refs`, e não para o
+`subject_id`, que é o membro.
+
+`PUT /squads/{id}/memberships` **substitui** a composição, então a lista vai
+inteira — e sai do que está gravado (`memberIdsAfterToggle` sobre
+`currentMemberIds`), nunca das caixas marcadas. A matriz só desenha membro
+ativo (premissa A3 do §16); montar a lista pela tela apagaria em silêncio a
+membership de quem foi inativado, que a premissa manda preservar.
+
+A matriz grava sprint a sprint (`sprint_from == sprint_to`). O `PUT` de
+intervalo exige que **todas** as sprints do intervalo existam (404, ao
+contrário da RN5 da alocação), e uma célula é sempre uma sprint só.
+
+A janela da matriz vem de uma chamada por sprint (`GET /squads?sprint_number=`),
+cada uma trazendo todas as squads com a composição daquela sprint. É o que faz
+a célula responder as duas perguntas do §10.3 — "está nesta squad?" e "em qual
+outra já está?" — sem uma segunda consulta por membro.
+
+Status **não** é campo de formulário no drawer de iniciativa: é botão, um por
+transição que a tabela do §6.3 permite (`manualTransitions`). `BACKLOG ⇄
+PLANNED` não está lá porque é automático (RN2). Um `<select>` com os seis
+valores ofereceria caminhos cuja única resposta possível é 422.
+
+Os `PATCH` montam só o que mudou (`projectPatch`, `initiativePatch`,
+`memberPatch`, `squadPatch`). Mandar o formulário inteiro apagaria a distinção
+do §8 entre campo ausente e campo nulo — `color: null` limpa a cor.
+
+Sem nenhuma sprint, `GET /sprints/next/preview` é 404 por regra: não há o que
+propor. O diálogo abre em branco com o número editável (a primeira sprint de um
+time real raramente é a 1). Com proposta e datas intocadas quem cria é
+`POST /sprints/next`, para o cálculo da RN10 não ser refeito no front.
+
+`mutationFn` cujo `if` devolve tipos diferentes (`ProjectDetailOut` do `POST`
+contra `ProjectOut` do `PATCH`) não compila. O retorno não é usado — a tela relê
+pelo cache invalidado —, então a função é `async (): Promise<void>`.
+
+`cors_origins` é campo de `Settings`, então dá para subir a API de verificação
+em outra porta com `CORS_ORIGINS='["http://localhost:4322"]'` no comando,
+junto de `DATABASE_URL` e `SNAPSHOT_DIR` apontando para um banco descartável.
 
 ## Nomes nas fixtures e nos docs
 

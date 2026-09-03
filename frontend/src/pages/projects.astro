@@ -1,5 +1,5 @@
 ---
-import RouteSummary from '../components/islands/RouteSummary';
+import Projects from '../components/islands/Projects';
 import PageHeader from '../components/layout/PageHeader.astro';
 import AppShell from '../layouts/AppShell.astro';
 ---
@@ -10,6 +10,6 @@ import AppShell from '../layouts/AppShell.astro';
     description="Projetos e as iniciativas de cada um. Projeto agrupa; iniciativa é a unidade de trabalho."
   />
   <div class="px-5 pb-5">
-    <RouteSummary route="projects" client:load />
+    <Projects client:load />
   </div>
 </AppShell>
