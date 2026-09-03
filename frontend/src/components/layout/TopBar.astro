@@ -2,10 +2,14 @@
 /**
  * Topbar de 56px com busca e o sino de alertas (§10.1).
  *
- * A busca está desenhada e **não está ligada**: os filtros e o `?q=` persistido
- * na URL são das telas de planejamento (§10.3), que são a Fase 7. Está marcada
- * como `disabled` de propósito — um campo que aceita texto e não faz nada é
- * pior que um campo visivelmente indisponível. Consta no relatório da fase.
+ * A busca era desenhada e desligada desde a Fase 6. Um campo permanentemente
+ * indisponível no lugar mais nobre da tela é pior que nenhum campo, então ela
+ * agora leva para a tela de projetos com o `?q=` preenchido — a busca por nome
+ * de iniciativa que o `GET /initiatives` já sabe fazer.
+ *
+ * Não é uma tela de resultado nova: é um atalho para um filtro que existe.
+ * Como toda iniciativa nasce com o nome do projeto (RN-I1), procurar o nome do
+ * projeto também acha.
  */
 import AlertBell from '../islands/AlertBell';
 ---
@@ -13,7 +17,7 @@ import AlertBell from '../islands/AlertBell';
 <header
   class="sticky top-0 z-20 flex h-topbar shrink-0 items-center gap-4 border-b border-border bg-surface px-4"
 >
-  <div class="relative w-[320px] max-w-[40vw]">
+  <form action="/projects" method="get" class="relative w-[320px] max-w-[40vw]" role="search">
     <svg
       class="icon pointer-events-none absolute top-2 left-2 size-4 text-text-disabled"
       aria-hidden="true"
@@ -23,15 +27,28 @@ import AlertBell from '../islands/AlertBell';
     </svg>
     <input
       type="search"
-      disabled
-      placeholder="Buscar"
-      title="A busca entra junto com os filtros das telas de planejamento."
-      aria-label="Buscar"
-      class="h-8 w-full rounded-sm border border-border-strong bg-surface pr-2 pl-7 text-14 text-text placeholder:text-text-disabled disabled:bg-neutral-soft disabled:text-text-disabled"
+      name="q"
+      data-topbar-search
+      placeholder="Buscar iniciativa"
+      title="Busca por nome de iniciativa. Atalho: /"
+      aria-label="Buscar iniciativa"
+      class="h-8 w-full rounded-sm border border-border-strong bg-surface pr-2 pl-7 text-14 text-text placeholder:text-text-disabled hover:border-primary focus:border-primary"
     />
-  </div>
+  </form>
 
-  <div class="ml-auto flex items-center gap-2">
+  <div class="ml-auto flex items-center gap-1">
+    <button
+      type="button"
+      data-shortcuts-open
+      title="Atalhos de teclado (?)"
+      aria-label="Atalhos de teclado"
+      aria-haspopup="dialog"
+      class="inline-flex size-8 items-center justify-center rounded-sm text-text-subtle hover:bg-neutral-soft hover:text-text"
+    >
+      <svg class="icon size-4" aria-hidden="true" focusable="false">
+        <use href="#icon-keyboard"></use>
+      </svg>
+    </button>
     <AlertBell client:load />
   </div>
 </header>

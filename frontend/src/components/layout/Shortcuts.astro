@@ -1,0 +1,171 @@
+---
+/**
+ * Atalhos de teclado e a lista que os explica (Fase 9).
+ *
+ * Fica no shell, e não numa ilha: os atalhos valem em qualquer rota, e uma
+ * ilha por página seria a mesma lógica montada cinco vezes. É o mesmo lugar do
+ * script da sidebar, pelo mesmo motivo.
+ *
+ * O conjunto é pequeno de propósito. Atalho que ninguém decora é peso morto, e
+ * atalho que dispara sem querer é pior que a falta dele.
+ *
+ * Não há atalho para recolher a barra lateral: as teclas naturais para isso
+ * (`[`, `\`) exigem AltGr no teclado ABNT2, que é o do time — um atalho que só
+ * funciona em metade das máquinas não é um atalho.
+ */
+const ROUTES = [
+  { key: '1', label: 'Planejamento' },
+  { key: '2', label: 'Backlog' },
+  { key: '3', label: 'Projetos' },
+  { key: '4', label: 'Time' },
+  { key: '5', label: 'Sprints' },
+] as const;
+
+const OTHERS = [
+  { keys: ['/'], label: 'Focar a busca' },
+  { keys: ['n'], label: 'A ação principal da tela (novo projeto, nova pessoa, criar sprint)' },
+  { keys: ['?'], label: 'Esta lista' },
+  { keys: ['Esc'], label: 'Fechar o diálogo ou o painel aberto' },
+] as const;
+---
+
+<dialog
+  id="atalhos"
+  aria-labelledby="atalhos-titulo"
+  class="m-auto w-[480px] max-w-[calc(100vw-32px)] rounded-md bg-surface p-0 text-text shadow-overlay backdrop:bg-[rgba(9,30,66,0.54)]"
+>
+  <div class="flex items-start justify-between gap-4 px-5 pt-5">
+    <h2 id="atalhos-titulo" class="text-16 font-semibold">Atalhos de teclado</h2>
+    <button
+      type="button"
+      data-shortcuts-close
+      aria-label="Fechar"
+      class="inline-flex h-8 items-center rounded-sm px-2 text-12 font-semibold text-text-subtle hover:bg-neutral-soft hover:text-text"
+    >
+      ✕
+    </button>
+  </div>
+
+  <div class="px-5 py-4">
+    <table class="w-full border-collapse text-14">
+      <tbody>
+        <tr class="border-b border-border">
+          <td class="w-44 py-2 pr-3 align-top">
+            <kbd class="shortcut-key">g</kbd> depois <kbd class="shortcut-key">1</kbd> a{' '}
+            <kbd class="shortcut-key">5</kbd>
+          </td>
+          <td class="py-2">
+            Ir para {ROUTES.map((route) => route.label).join(', ')}
+          </td>
+        </tr>
+        {
+          OTHERS.map((item) => (
+            <tr class="border-b border-border last:border-0">
+              <td class="w-44 py-2 pr-3 align-top">
+                {item.keys.map((key) => (
+                  <kbd class="shortcut-key">{key}</kbd>
+                ))}
+              </td>
+              <td class="py-2">{item.label}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+    <p class="mt-3 mb-0 text-11 text-text-subtle">
+      Os atalhos não disparam enquanto o foco está num campo de texto, nem com um
+      diálogo aberto.
+    </p>
+  </div>
+</dialog>
+
+<script>
+  // As rotas saem da própria barra lateral, na ordem em que estão lá. Uma
+  // segunda lista aqui teria que ser mantida em sincronia com a primeira, e o
+  // sintoma de esquecer seria `g 3` levando para a tela errada.
+  const routes = [...document.querySelectorAll<HTMLAnchorElement>('nav a[href]')].map(
+    (link) => link.getAttribute('href')!,
+  );
+  // Tempo para completar a sequência `g` + número. Curto o bastante para um
+  // `g` esquecido não sequestrar o próximo dígito digitado.
+  const SEQUENCE_MS = 1200;
+
+  const dialog = document.querySelector<HTMLDialogElement>('#atalhos');
+  let pendingGo = false;
+  let pendingTimer = 0;
+
+  function isTyping(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) return false;
+    if (target.isContentEditable) return true;
+    return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+  }
+
+  /** Diálogo aberto tem as próprias regras de teclado — inclusive o `Esc`. */
+  function isDialogOpen(): boolean {
+    return document.querySelector('dialog[open]') !== null;
+  }
+
+  function clearPending() {
+    pendingGo = false;
+    window.clearTimeout(pendingTimer);
+  }
+
+  document.querySelectorAll('[data-shortcuts-open]').forEach((trigger) => {
+    trigger.addEventListener('click', () => dialog?.showModal());
+  });
+  document.querySelector('[data-shortcuts-close]')?.addEventListener('click', () => {
+    dialog?.close();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    // Combinação com modificador é do navegador ou do sistema, não nossa.
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (isTyping(event.target)) return;
+
+    if (isDialogOpen()) {
+      // A lista de atalhos fecha com o mesmo `?` que abriu; o resto dos
+      // diálogos fecha no `Esc`, que é do próprio `<dialog>`.
+      if (event.key === '?' && dialog?.open) {
+        event.preventDefault();
+        dialog.close();
+      }
+      return;
+    }
+
+    if (pendingGo) {
+      clearPending();
+      const target = routes[Number(event.key) - 1];
+      if (target) {
+        event.preventDefault();
+        window.location.assign(target);
+      }
+      return;
+    }
+
+    switch (event.key) {
+      case 'g':
+        pendingGo = true;
+        pendingTimer = window.setTimeout(clearPending, SEQUENCE_MS);
+        break;
+      case '/':
+        event.preventDefault();
+        document.querySelector<HTMLInputElement>('[data-topbar-search]')?.focus();
+        break;
+      case 'n': {
+        // A ação principal de cada tela mora numa ilha React diferente. O
+        // atributo é a ponte: o shell não precisa saber qual botão é, nem em
+        // qual ilha ele está.
+        const primary = document.querySelector<HTMLButtonElement>('[data-primary-action]');
+        if (primary) {
+          event.preventDefault();
+          primary.click();
+        }
+        break;
+      }
+      case '?':
+        event.preventDefault();
+        dialog?.showModal();
+        break;
+    }
+  });
+</script>

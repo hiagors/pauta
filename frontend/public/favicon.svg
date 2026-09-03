@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Pauta">
+  <!-- A mesma marca da barra lateral: quadrado azul da ação primária (§10.2) e
+       o P desenhado como caminho, não como texto, para não depender da fonte
+       que o navegador tiver na hora de gerar o ícone. -->
+  <rect width="32" height="32" rx="6" fill="#0052CC"/>
+  <path d="M11 8h7a5 5 0 0 1 0 10h-3v6h-4z" fill="#FFFFFF"/>
+</svg>

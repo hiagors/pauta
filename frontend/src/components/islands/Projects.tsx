@@ -150,8 +150,11 @@ function ProjectsScreen() {
             </Button>
           )}
         </div>
+        {/* A ponte com o atalho `n` do shell: ele clica no primeiro
+            `[data-primary-action]` da página, sem saber de qual ilha ele é. */}
         <Button
           variant="primary"
+          data-primary-action
           onClick={() => setEditing({ kind: 'project', projectId: null })}
         >
           Novo projeto

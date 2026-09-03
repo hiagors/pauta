@@ -43,11 +43,11 @@ unicidade da alocação é `(initiative_id, sprint_id)`.
 Três pontos menores seguem abertos, com premissa em vigor documentada na seção 16
 do spec — siga a premissa, não pergunte de novo.
 
-Fases concluídas: **0** (scaffold), **1** (domínio puro), **2** (use cases com
-repositórios fake), **3** (persistência em SQLite), **4** (API HTTP), **5**
-(CLI + snapshot), **6** (shell do front), **7** (planejamento e backlog) e **8**
-(projetos, time, sprints e painel de alertas). Próxima: **Fase 9** (acabamento:
-estados vazio/erro/carregando, atalhos de teclado, README de uso).
+As dez fases da seção 13 estão concluídas: **0** (scaffold), **1** (domínio
+puro), **2** (use cases com repositórios fake), **3** (persistência em SQLite),
+**4** (API HTTP), **5** (CLI + snapshot), **6** (shell do front), **7**
+(planejamento e backlog), **8** (projetos, time, sprints e painel de alertas) e
+**9** (acabamento).
 
 Todos os endpoints da seção 8 existem, `/snapshots` inclusive. A lista vive em
 `tests/http/test_app.py` e é conferida nas duas direções — falta e excesso.
@@ -259,6 +259,49 @@ pelo cache invalidado —, então a função é `async (): Promise<void>`.
 `cors_origins` é campo de `Settings`, então dá para subir a API de verificação
 em outra porta com `CORS_ORIGINS='["http://localhost:4322"]'` no comando,
 junto de `DATABASE_URL` e `SNAPSHOT_DIR` apontando para um banco descartável.
+
+## Acabamento (Fase 9)
+
+Os atalhos moram no shell (`layout/Shortcuts.astro`), fora do React: valem em
+qualquer rota, e uma ilha por página seria a mesma lógica montada cinco vezes.
+O script lê as rotas da **própria** barra lateral (`nav a[href]`) em vez de
+manter uma segunda lista — o sintoma de esquecer de sincronizar seria `g 3`
+levando para a tela errada.
+
+`n` dispara a ação principal da tela clicando no primeiro
+`[data-primary-action]` da página. É a ponte entre o script do shell e as ilhas:
+ele não precisa saber qual botão é nem em qual ilha ele está. Tela nova com ação
+primária marca o botão e ganha o atalho de graça.
+
+Nenhum atalho usa `[` ou `\`: no ABNT2 essas teclas exigem AltGr, e atalho que
+só funciona em metade das máquinas não é atalho.
+
+O guarda dos atalhos é `isTyping(target)` mais `document.querySelector('dialog[open]')`.
+Sem o segundo, `g 3` navegaria com um drawer aberto e o formulário sumiria com o
+que estava digitado.
+
+O `alerts_by_sprint` da grade manda **tipo** sem severidade, então
+`ALERT_TYPE_SEVERITY` (`lib/alerts.ts`) repete a tabela do §7.3 só para o ícone
+da coluna. É a única cópia dessa tabela no front — em todo outro lugar quem
+manda é o `severity` do próprio `AlertOut`. Sem ela o ícone sairia vermelho para
+`MEMBER_IDLE`, que é informação: com o time inteiro, quase toda sprint futura
+tem alguém sem frente (premissa A2 do §16), e o vermelho pararia de significar
+alguma coisa.
+
+A busca da topbar não é tela de resultado: é um `<form method="get">` para
+`/projects`, que já filtra iniciativa por `?q=`. Ligá-la assim resolve o campo
+permanentemente desabilitado sem inventar rota. Como toda iniciativa nasce com o
+nome do projeto (RN-I1), procurar o nome do projeto também acha.
+
+`public/favicon.svg` existe porque sem ele o navegador pedia `/favicon.ico` e
+levava 404 em toda carga de página. O `P` é caminho, não `<text>`: o ícone é
+gerado fora do documento e não pode depender da fonte carregada.
+
+Verificação do critério de aceite: um roteiro de CDP planeja uma sprint inteira
+do zero contra um banco recém-migrado — cria sprint, pessoa, squad, composição,
+projeto, iniciativa, aloca pelo backlog e confere a grade e o painel. Ele mora
+no scratchpad, não no repositório: depende de Chrome e de servidor no ar, o que
+não é `mise run test`.
 
 ## Nomes nas fixtures e nos docs
 

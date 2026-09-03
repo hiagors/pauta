@@ -20,7 +20,7 @@ import { Field } from '../ui/Field';
 import { Lozenge } from '../ui/Lozenge';
 import { Modal } from '../ui/Modal';
 import { Select, type SelectOption } from '../ui/Select';
-import { describeError } from '../ui/States';
+import { EmptyState, describeError } from '../ui/States';
 import { useToast } from '../ui/Toast';
 
 /**
@@ -250,6 +250,13 @@ export function AllocationDialog({
     },
   });
 
+  // Alocar é escolher um responsável: sem nenhuma squad nem pessoa ativa, o
+  // diálogo não tem o que oferecer. Vale exatamente no caminho "planejar do
+  // zero", em que o time é cadastrado depois do primeiro projeto.
+  const assigneesLoaded = squads.data !== undefined && members.data !== undefined;
+  const noAssignees =
+    assigneesLoaded && squads.data.length === 0 && members.data.length === 0;
+
   const choice = parseAssignee(assignee);
   const range = { from: Number(from), to: Number(to) };
   const rangeIsValid =
@@ -264,7 +271,7 @@ export function AllocationDialog({
       title="Alocar iniciativa"
       onClose={onClose}
       footer={
-        result ? (
+        result || noAssignees ? (
           <Button variant="primary" onClick={onClose}>
             Fechar
           </Button>
@@ -295,6 +302,15 @@ export function AllocationDialog({
 
       {result ? (
         <ResultPanel result={result} />
+      ) : noAssignees ? (
+        <EmptyState
+          message="Nenhuma squad nem pessoa ativa para receber a alocação. Cadastre o time antes de alocar."
+          action={
+            <Button variant="primary" onClick={() => window.location.assign('/team')}>
+              Ir para Time
+            </Button>
+          }
+        />
       ) : (
         <div className="flex flex-col gap-3">
           <Select

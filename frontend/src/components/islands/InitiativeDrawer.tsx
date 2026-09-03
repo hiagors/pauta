@@ -8,7 +8,7 @@ import { Drawer } from '../ui/Drawer';
 import { Field, TextArea } from '../ui/Field';
 import { StatusLozenge } from '../ui/Lozenge';
 import { Select } from '../ui/Select';
-import { Skeleton, describeError } from '../ui/States';
+import { ErrorState, Skeleton, describeError } from '../ui/States';
 import { useToast } from '../ui/Toast';
 
 /**
@@ -190,7 +190,11 @@ export function InitiativeDrawer({
       {loading ? (
         <Skeleton lines={4} />
       ) : initiative.isError ? (
-        <p className="m-0 text-14 text-danger">{describeError(initiative.error)}</p>
+        <ErrorState
+          what="esta iniciativa"
+          error={initiative.error}
+          onRetry={() => void initiative.refetch()}
+        />
       ) : (
         <div className="flex flex-col gap-4">
           <Field

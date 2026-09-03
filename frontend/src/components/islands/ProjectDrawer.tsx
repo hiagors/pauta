@@ -8,7 +8,7 @@ import { Checkbox } from '../ui/Checkbox';
 import { Drawer } from '../ui/Drawer';
 import { Field, TextArea } from '../ui/Field';
 import { StatusLozenge } from '../ui/Lozenge';
-import { Skeleton, describeError } from '../ui/States';
+import { ErrorState, Skeleton, describeError } from '../ui/States';
 import { useToast } from '../ui/Toast';
 
 /**
@@ -184,7 +184,11 @@ export function ProjectDrawer({
       {loading ? (
         <Skeleton lines={4} />
       ) : detail.isError ? (
-        <p className="m-0 text-14 text-danger">{describeError(detail.error)}</p>
+        <ErrorState
+          what="este projeto"
+          error={detail.error}
+          onRetry={() => void detail.refetch()}
+        />
       ) : (
         <div className="flex flex-col gap-4">
           <Field

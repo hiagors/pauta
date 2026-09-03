@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { GridOut } from '../../lib/api';
+import { worstSeverity } from '../../lib/alerts';
 import {
   ALERT_TYPE_LABEL,
   formatDate,
@@ -86,6 +87,10 @@ export function PlanningGrid({ grid, onAllocate, onBarAction }: PlanningGridProp
           </div>
           {grid.sprints.map((sprint) => {
             const alerts = grid.alerts_by_sprint[String(sprint.number)] ?? [];
+            // O vermelho é do aviso. `MEMBER_IDLE` e `EMPTY_SQUAD` são
+            // informação (§7.3), e sem essa distinção quase toda coluna sairia
+            // vermelha — o ícone pararia de dizer alguma coisa.
+            const severity = worstSeverity(alerts);
             return (
               <div
                 key={sprint.id}
@@ -100,14 +105,20 @@ export function PlanningGrid({ grid, onAllocate, onBarAction }: PlanningGridProp
                   {sprint.number}
                   {/* O ícone resume a sprint inteira: `alerts_by_sprint` não é
                       afetado pelos filtros, de propósito (§8). */}
-                  {alerts.length > 0 && (
-                    <svg className="icon size-3 text-danger" role="img">
+                  {severity && (
+                    <svg
+                      className={cx(
+                        'icon size-3',
+                        severity === 'WARNING' ? 'text-danger' : 'text-text-subtle',
+                      )}
+                      role="img"
+                    >
                       <title>
-                        {`Alertas na Sprint ${sprint.number}: ${alerts
-                          .map((type) => ALERT_TYPE_LABEL[type])
-                          .join(', ')}`}
+                        {`${severity === 'WARNING' ? 'Avisos' : 'Informações'} na Sprint ${
+                          sprint.number
+                        }: ${alerts.map((type) => ALERT_TYPE_LABEL[type]).join(', ')}`}
                       </title>
-                      <use href="#icon-warning" />
+                      <use href={severity === 'WARNING' ? '#icon-warning' : '#icon-info'} />
                     </svg>
                   )}
                 </span>

@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { AlertOut } from '../src/lib/api';
 import {
+  ALERT_TYPE_SEVERITY,
   alertContext,
   groupBySprint,
   mutedAlerts,
   openAlerts,
   warningCount,
+  worstSeverity,
 } from '../src/lib/alerts';
 
 function alert(overrides: Partial<AlertOut> = {}): AlertOut {
@@ -97,5 +99,28 @@ describe('alertContext', () => {
       alert({ type: 'MEMBER_CONFLICT', subject_id: 'membro-ana', entity_refs: [] }),
     );
     expect(context.href).toBe('/planning?from=19&to=19&member=membro-ana');
+  });
+});
+
+describe('worstSeverity', () => {
+  it('é aviso quando há pelo menos um aviso', () => {
+    expect(worstSeverity(['MEMBER_IDLE', 'SQUAD_OVERLOADED'])).toBe('WARNING');
+    expect(worstSeverity(['MEMBER_CONFLICT'])).toBe('WARNING');
+  });
+
+  it('é informação quando só há informação', () => {
+    expect(worstSeverity(['MEMBER_IDLE', 'EMPTY_SQUAD'])).toBe('INFO');
+  });
+
+  it('é nulo quando a sprint não tem alerta nenhum', () => {
+    expect(worstSeverity([])).toBeNull();
+  });
+
+  it('concorda com a severidade que o próprio alerta traz (§7.3)', () => {
+    // A tabela é uma cópia do §7.3 para o `alerts_by_sprint`, que manda tipo
+    // sem severidade. Se as duas divergirem, é aqui que aparece.
+    expect(ALERT_TYPE_SEVERITY[alert().type]).toBe(alert().severity);
+    const ocioso = alert({ type: 'MEMBER_IDLE', severity: 'INFO' });
+    expect(ALERT_TYPE_SEVERITY[ocioso.type]).toBe(ocioso.severity);
   });
 });

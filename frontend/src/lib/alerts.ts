@@ -109,3 +109,30 @@ export function alertContext(alert: AlertOut): AlertContext {
     }
   }
 }
+
+/**
+ * A severidade de cada tipo, como o §7.3 fixa.
+ *
+ * O `AlertOut` já traz `severity` — esta tabela existe para o **único** lugar
+ * onde a API manda tipo sem severidade: `alerts_by_sprint` da grade (§8), que
+ * é uma lista de tipos por sprint. Sem ela, o ícone da coluna sairia vermelho
+ * para `MEMBER_IDLE`, que é informação, e o vermelho pararia de significar
+ * alguma coisa: com o time inteiro, quase toda sprint futura tem uma pessoa
+ * sem frente (premissa A2 do §16).
+ */
+export const ALERT_TYPE_SEVERITY: Record<AlertType, Schemas['Severity']> = {
+  SQUAD_OVERLOADED: 'WARNING',
+  MEMBER_CONFLICT: 'WARNING',
+  MEMBER_IDLE: 'INFO',
+  EMPTY_SQUAD: 'INFO',
+};
+
+/** `WARNING` se algum dos tipos for aviso; `INFO` se só houver informação. */
+export function worstSeverity(
+  types: readonly AlertType[],
+): Schemas['Severity'] | null {
+  if (types.length === 0) return null;
+  return types.some((type) => ALERT_TYPE_SEVERITY[type] === 'WARNING')
+    ? 'WARNING'
+    : 'INFO';
+}

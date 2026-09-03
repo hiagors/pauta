@@ -85,3 +85,21 @@
     justify-content: center;
   }
 }
+
+@layer components {
+  /* Tecla, na lista de atalhos. Não é `<code>`: é o desenho de uma tecla, com
+   * a linha de baixo mais escura para dar o relevo mínimo. */
+  .shortcut-key {
+    display: inline-block;
+    min-width: 20px;
+    padding: 1px 5px;
+    border: 1px solid var(--color-border-strong);
+    border-bottom-width: 2px;
+    border-radius: var(--radius-sm);
+    background-color: var(--color-neutral-soft);
+    font-family: inherit;
+    font-size: var(--text-11);
+    font-weight: 600;
+    text-align: center;
+  }
+}

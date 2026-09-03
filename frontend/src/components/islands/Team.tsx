@@ -104,7 +104,7 @@ function TeamScreen() {
         singular="pessoa"
         plural="pessoas"
         action={
-          <Button variant="primary" onClick={() => setEditingMember(null)}>
+          <Button variant="primary" data-primary-action onClick={() => setEditingMember(null)}>
             Nova pessoa
           </Button>
         }

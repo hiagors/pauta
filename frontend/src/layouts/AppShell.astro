@@ -3,10 +3,11 @@
  * Shell da aplicação: sidebar + topbar (§5, §10.1).
  *
  * Toda página passa por aqui. O `output: 'static'` do §10.4 vale: este arquivo
- * gera HTML no build, e o único JavaScript que sai daqui é o script do tema da
- * sidebar e as ilhas React marcadas com `client:*`.
+ * gera HTML no build, e o JavaScript que sai daqui é só o do estado da sidebar,
+ * o dos atalhos de teclado e as ilhas React marcadas com `client:*`.
  */
 import Icons from '../components/layout/Icons.astro';
+import Shortcuts from '../components/layout/Shortcuts.astro';
 import Sidebar from '../components/layout/Sidebar.astro';
 import TopBar from '../components/layout/TopBar.astro';
 import '../styles/global.css';
@@ -26,6 +27,8 @@ const pathname = Astro.url.pathname;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title} · Pauta</title>
+    <!-- Sem isto o navegador pede `/favicon.ico` e leva 404 em toda carga. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <script is:inline>
       // Aplica a escolha da sidebar antes da primeira pintura. Se isto virasse
       // um `useEffect`, a barra abriria em 240px e encolheria na frente do
@@ -41,6 +44,7 @@ const pathname = Astro.url.pathname;
   </head>
   <body class="bg-bg text-text">
     <Icons />
+    <Shortcuts />
     <div class="flex min-h-dvh">
       <Sidebar pathname={pathname} />
       <div class="flex min-w-0 flex-1 flex-col">

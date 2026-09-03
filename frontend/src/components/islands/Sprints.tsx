@@ -44,6 +44,7 @@ function SprintsScreen() {
         </p>
         <Button
           variant="primary"
+          data-primary-action
           disabled={!sprints.data}
           onClick={() => setCreating(true)}
         >
