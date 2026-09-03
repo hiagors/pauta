@@ -82,11 +82,13 @@ function SprintsScreen() {
               </tr>
             </THead>
             <TBody>
-              {[...sprints.data]
-                .sort((left, right) => left.number - right.number)
-                .map((sprint) => (
-                  <SprintRow key={sprint.id} sprint={sprint} />
-                ))}
+              {/* Sem ordenar aqui: `GET /sprints` promete `number` crescente
+                  (a porta `SprintRepository.list_all` o diz, e a consolidação
+                  de barras da grade já depende disso). Reordenar no cliente
+                  esconderia o dia em que o backend deixasse de cumprir. */}
+              {sprints.data.map((sprint) => (
+                <SprintRow key={sprint.id} sprint={sprint} />
+              ))}
             </TBody>
           </Table>
         )}

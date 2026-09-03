@@ -130,6 +130,34 @@ describe('erro', () => {
     expect(error.status).toBe(500);
   });
 
+  it('corpo que não é JSON vira ApiError, e não SyntaxError cru', async () => {
+    // Um proxy no meio, uma página de erro do servidor, um 502 em HTML: o
+    // `JSON.parse` explodia e a tela recebia um erro que `describeError` não
+    // sabe ler.
+    const { api } = clientWith(
+      new Response('<html><body>502 Bad Gateway</body></html>', {
+        status: 502,
+        headers: { 'content-type': 'text/html' },
+      }),
+    );
+    const error = (await api.listProjects().catch((caught: unknown) => caught)) as ApiError;
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.code).toBe(UNEXPECTED_ERROR_CODE);
+    expect(error.status).toBe(502);
+  });
+
+  it('corpo inválido numa resposta 200 também vira ApiError', async () => {
+    const { api } = clientWith(
+      new Response('{ isto não fecha', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const error = (await api.listProjects().catch((caught: unknown) => caught)) as ApiError;
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.code).toBe(UNEXPECTED_ERROR_CODE);
+  });
+
   it('API fora do ar vira erro com código próprio e a base na mensagem', async () => {
     const { api } = clientWith(() => {
       throw new TypeError('fetch failed');

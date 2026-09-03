@@ -61,6 +61,32 @@ def test_overlapping_dates_are_409(api: Api) -> None:
     assert response.json()["error"]["code"] == "SPRINT_OVERLAP"
 
 
+def test_the_listing_comes_ordered_by_number(api: Api) -> None:
+    """A porta promete `number` crescente, e três leitores contam com isso.
+
+    A consolidação de barras da grade, a janela default da matriz de composição
+    e o intervalo que o backlog propõe ao alocar. As sprints são criadas fora de
+    ordem de propósito: uma inserção que voltasse na ordem do `id` passaria num
+    teste que criasse em ordem.
+    """
+    api.created(
+        "/sprints",
+        {"number": 20, "start_date": "2026-09-28", "end_date": "2026-10-09"},
+    )
+    api.created(
+        "/sprints",
+        {"number": 19, "start_date": "2026-09-14", "end_date": "2026-09-25"},
+    )
+    api.created(
+        "/sprints",
+        {"number": 18, "start_date": "2026-08-31", "end_date": "2026-09-11"},
+    )
+
+    found = api.get("/sprints").json()
+
+    assert [item["number"] for item in found] == [18, 19, 20]
+
+
 def test_only_one_sprint_is_current(api: Api) -> None:
     """RN12: a atual é a de maior `start_date` já passado. Hoje é 02/09/2026,
     dentro da 18."""

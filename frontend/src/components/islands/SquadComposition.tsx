@@ -43,7 +43,16 @@ export function SquadComposition({
   currentSprintNumber,
 }: SquadCompositionProps) {
   const client = useQueryClient();
-  const [pendingCell, setPendingCell] = useState<string | null>(null);
+  /**
+   * A sprint que tem uma gravação em voo, e não a célula.
+   *
+   * O `PUT` manda a composição **inteira** daquela sprint, montada a partir do
+   * cache. Marcar uma segunda pessoa da mesma sprint antes de o refetch chegar
+   * leria o mesmo cache velho e desfaria a primeira marcação em silêncio.
+   * Travar a coluna inteira enquanto ela grava é o que impede isso; as outras
+   * sprints seguem editáveis, porque são `PUT` de composições diferentes.
+   */
+  const [pendingSprint, setPendingSprint] = useState<number | null>(null);
 
   const results = useQueries({
     queries: sprintNumbers.map((number) => ({
@@ -56,7 +65,7 @@ export function SquadComposition({
   const failed = results.find((result) => result.isError);
   const loading = results.some((result) => result.isPending);
 
-  const window: SprintComposition[] = results.flatMap((result, index) =>
+  const composed: SprintComposition[] = results.flatMap((result, index) =>
     result.data
       ? [{ sprintNumber: sprintNumbers[index]!, squads: result.data }]
       : [],
@@ -73,13 +82,13 @@ export function SquadComposition({
         sprint_from: input.sprintNumber,
         sprint_to: input.sprintNumber,
         member_ids: memberIdsAfterToggle(
-          currentMemberIds(window, squad.id, input.sprintNumber),
+          currentMemberIds(composed, squad.id, input.sprintNumber),
           input.memberId,
           input.present,
         ),
       }),
     onSettled: () => {
-      setPendingCell(null);
+      setPendingSprint(null);
       void client.invalidateQueries({ queryKey: ['squads'] });
       void client.invalidateQueries({ queryKey: ['alerts'] });
       void client.invalidateQueries({ queryKey: ['planning'] });
@@ -96,7 +105,7 @@ export function SquadComposition({
     );
   }
 
-  if (loading && window.length === 0) return <Skeleton lines={4} />;
+  if (loading && composed.length === 0) return <Skeleton lines={4} />;
 
   if (members.length === 0) {
     return (
@@ -104,9 +113,9 @@ export function SquadComposition({
     );
   }
 
-  const rows = compositionRows(members, squad.id, window);
-  const absentRepresentative = representativeIsAbsent(squad, window, currentSprintNumber);
-  const inactive = inactiveWithComposition(window, squad.id);
+  const rows = compositionRows(members, squad.id, composed);
+  const absentRepresentative = representativeIsAbsent(squad, composed, currentSprintNumber);
+  const inactive = inactiveWithComposition(composed, squad.id);
 
   return (
     <div className="flex flex-col gap-2">
@@ -169,8 +178,8 @@ export function SquadComposition({
                   </span>
                 </Td>
                 {row.cells.map((cell) => {
-                  const key = `${row.member.id}-${cell.sprintNumber}`;
                   const conflicting = cell.present && cell.otherSquads.length > 0;
+                  const saving = pendingSprint === cell.sprintNumber;
                   return (
                     <Td
                       key={cell.sprintNumber}
@@ -183,10 +192,10 @@ export function SquadComposition({
                         <input
                           type="checkbox"
                           checked={cell.present}
-                          disabled={pendingCell === key}
+                          disabled={saving}
                           aria-label={`${row.member.name} na squad ${squad.name} na Sprint ${cell.sprintNumber}`}
                           onChange={(event) => {
-                            setPendingCell(key);
+                            setPendingSprint(cell.sprintNumber);
                             toggle.mutate({
                               sprintNumber: cell.sprintNumber,
                               memberId: row.member.id,

@@ -82,11 +82,21 @@ async function applyAllocation(input: ApplyInput): Promise<AllocationResultOut> 
   return result;
 }
 
-/** Tudo que a grade, a lista, o backlog e o sino leem sai daqui. */
+/**
+ * Tudo que a grade, a lista, o backlog, a tela de projetos e o sino leem.
+ *
+ * `initiatives` entra porque alocar **muda o status** (RN2: a primeira
+ * alocação leva `BACKLOG` para `PLANNED`, e perder todas leva de volta), e é
+ * esse status que a tela de projetos desenha. Hoje as duas telas nunca estão
+ * na mesma página — cada rota do Astro é uma carga nova —, mas a lista de
+ * chaves a invalidar é a resposta a "o que esta mutação muda", e não a "o que
+ * está montado agora".
+ */
 function useInvalidatePlanning() {
   const client = useQueryClient();
   return () => {
     void client.invalidateQueries({ queryKey: ['planning'] });
+    void client.invalidateQueries({ queryKey: ['initiatives'] });
     void client.invalidateQueries({ queryKey: ['alerts'] });
   };
 }

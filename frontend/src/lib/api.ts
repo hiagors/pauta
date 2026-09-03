@@ -157,8 +157,24 @@ export function createApiClient(options: ApiClientOptions) {
 
     if (response.status === 204) return undefined as T;
 
+    // O corpo pode não ser JSON: um proxy no meio, uma página de erro do
+    // servidor, um 502 em HTML. Sem a guarda, o `SyntaxError` do `JSON.parse`
+    // subia cru até a tela — e `describeError`, que só entende `ApiError`,
+    // não tinha o que dizer.
     const text = await response.text();
-    const payload: unknown = text ? JSON.parse(text) : null;
+    let payload: unknown = null;
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        throw new ApiError(
+          response.status,
+          UNEXPECTED_ERROR_CODE,
+          `A API respondeu ${response.status} com um corpo que não é JSON.`,
+          { body: text.slice(0, 200) },
+        );
+      }
+    }
     if (!response.ok) throw toApiError(response.status, payload);
     return payload as T;
   }

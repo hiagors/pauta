@@ -72,6 +72,10 @@ export function MemberDrawer({ member, onClose }: MemberDrawerProps) {
       void client.invalidateQueries({ queryKey: ['members'] });
       void client.invalidateQueries({ queryKey: ['squads'] });
       void client.invalidateQueries({ queryKey: ['alerts'] });
+      // Inativar alguém tira o nome do filtro de pessoa da grade e muda quem
+      // ela pode receber numa alocação nova. As outras telas invalidam
+      // `planning` pelo mesmo motivo; faltar aqui era esquecimento, não regra.
+      void client.invalidateQueries({ queryKey: ['planning'] });
       notify(member ? `${form.name.trim()} salvo.` : `${form.name.trim()} cadastrado.`, 'success');
       onClose();
     },

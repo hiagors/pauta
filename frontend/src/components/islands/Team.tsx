@@ -41,10 +41,11 @@ const WINDOW_SIZE = 6;
  * cadastrada.
  */
 function defaultWindow(sprints: readonly SprintOut[]): number[] {
-  const numbers = sprints.map((sprint) => sprint.number).sort((a, b) => a - b);
-  const currentIndex = sprints.findIndex((sprint) => sprint.is_current);
-  const start = currentIndex >= 0 ? numbers.indexOf(sprints[currentIndex]!.number) : 0;
-  return numbers.slice(start, start + WINDOW_SIZE);
+  // `GET /sprints` já vem com `number` crescente (a porta o promete), então a
+  // posição da sprint atual na lista é a posição dela na janela.
+  const current = sprints.findIndex((sprint) => sprint.is_current);
+  const start = current >= 0 ? current : 0;
+  return sprints.slice(start, start + WINDOW_SIZE).map((sprint) => sprint.number);
 }
 
 /** O intervalo pedido na URL, recortado no que existe de fato. */
@@ -59,8 +60,7 @@ function requestedWindow(
   const end = Number.isInteger(toNumber) && to !== '' ? toNumber : fromNumber;
   const numbers = sprints
     .map((sprint) => sprint.number)
-    .filter((number) => number >= fromNumber && number <= end)
-    .sort((a, b) => a - b);
+    .filter((number) => number >= fromNumber && number <= end);
   return numbers.length > 0 ? numbers : null;
 }
 
